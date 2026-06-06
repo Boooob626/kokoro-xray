@@ -105,9 +105,9 @@ else [] end;
 
 def edge_single_routing: {
   domainStrategy: "IPIfNonMatch",
-  rules: google_direct_rules + single_node_block_rules + [
+  rules: (google_direct_rules + single_node_block_rules + [
     { type: "field", network: "tcp,udp", outboundTag: "DIRECT" }
-  ]
+  ])
 };
 
 def edge_multinode_routing: {
@@ -125,7 +125,7 @@ def edge_inbounds:
 
 def edge_config: log_block + {
   inbounds: edge_inbounds,
-  outbounds: base_outbounds + wg_outbound,
+  outbounds: (base_outbounds + wg_outbound),
   routing: edge_routing,
   policy: policy_block.policy
 };
@@ -149,14 +149,14 @@ else {} end;
 
 def exit_config: log_block + {
   inbounds: [exit_inbound],
-  outbounds: base_outbounds + exit_tor_outbound,
+  outbounds: (base_outbounds + exit_tor_outbound),
   routing: {
     domainStrategy: "IPIfNonMatch",
-    rules: exit_tor_rules + [
+    rules: (exit_tor_rules + [
       { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
       { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
       { type: "field", network: "tcp,udp", outboundTag: "DIRECT" }
-    ]
+    ])
   },
   policy: policy_block.policy
 };

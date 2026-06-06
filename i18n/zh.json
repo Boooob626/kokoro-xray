@@ -1,0 +1,16 @@
+{
+  "menu_subtitle": "极简 Shell Xray 管理脚本",
+  "menu_edge": "安装边缘节点 (DE)",
+  "menu_exit": "安装出口节点 (NL)",
+  "menu_link": "显示分享链接",
+  "menu_tor_on": "启用 Tor (.onion) 分流",
+  "menu_tor_off": "禁用 Tor 分流",
+  "menu_multinode": "关联出口节点 (WireGuard)",
+  "menu_validate": "验证配置",
+  "menu_quit": "退出",
+  "menu_choice": "请选择",
+  "invalid_choice": "无效选项",
+  "prompt_exit_ip": "出口节点 IP",
+  "prompt_exit_pubkey": "出口节点 WireGuard 公钥",
+  "multinode_saved": "多节点设置已保存 — 请重新部署边缘节点以生效"
+}

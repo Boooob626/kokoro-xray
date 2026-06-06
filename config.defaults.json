@@ -1,0 +1,45 @@
+{
+  "version": "0.1.0",
+  "language": "auto",
+  "role": "",
+  "inbound": {
+    "mode": "both",
+    "uuid": "",
+    "xhttp_path": "",
+    "reality": {
+      "dest": "www.cloudflare.com:443",
+      "server_names": ["www.cloudflare.com"],
+      "private_key": "",
+      "public_key": "",
+      "short_ids": [""]
+    },
+    "tls": {
+      "domain": "",
+      "cdn_domain": ""
+    }
+  },
+  "multinode": {
+    "enabled": false,
+    "exit_ip": "",
+    "exit_port": 51820,
+    "exit_pubkey": "",
+    "local_privkey": "",
+    "local_pubkey": "",
+    "local_wg_ip": "10.66.0.2",
+    "peer_wg_ip": "10.66.0.1",
+    "finalmask": true
+  },
+  "tor": {
+    "enabled": false,
+    "socks_port": 9050
+  },
+  "routing": {
+    "preset": "ai-to-exit"
+  },
+  "paths": {
+    "xray_config": "/usr/local/etc/xray/config.json",
+    "caddyfile": "/etc/caddy/Caddyfile",
+    "xray_bin": "/usr/local/bin/xray",
+    "caddy_bin": "/usr/bin/caddy"
+  }
+}

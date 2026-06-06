@@ -12,6 +12,11 @@
       "domain": "",
       "cdn_domain": "",
       "acme_email": ""
+    },
+    "xhttp": {
+      "mode": "auto",
+      "obfs": false,
+      "xmux": false
     }
   },
   "caddy": {

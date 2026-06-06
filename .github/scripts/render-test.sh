@@ -23,9 +23,21 @@ jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile sec "${FIX}/edge-secrets.json" \
     >"${OUT}/edge-single-xray.json"
 jq -e '(.outbounds | map(.tag) | index("WG_TO_EXIT")) | not' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.inbounds[0].streamSettings.xhttpSettings.mode == "auto"' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[0].domain[0] == "geosite:google"' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules | map(select(.ip[]? == "geoip:ru")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/edge-single-xray.json" >/dev/null
+
+echo "== edge xhttp obfs/xmux =="
+jq '.inbound.xhttp = {"mode":"packet-up","obfs":true,"xmux":true}' \
+    "${FIX}/edge-single-config.json" >"${OUT}/edge-obfs-config.json"
+jq -n -f "${ROOT}/lib/render.jq" \
+    --slurpfile cfg "${OUT}/edge-obfs-config.json" \
+    --slurpfile sec "${FIX}/edge-secrets.json" \
+    >"${OUT}/edge-obfs-xray.json"
+jq -e '.inbounds[0].streamSettings.xhttpSettings.mode == "packet-up"' "${OUT}/edge-obfs-xray.json" >/dev/null
+jq -e '.inbounds[0].streamSettings.xhttpSettings.xPaddingObfsMode == true' "${OUT}/edge-obfs-xray.json" >/dev/null
+jq -e '.inbounds[0].streamSettings.xhttpSettings.xmux.maxConcurrency == "1-1"' "${OUT}/edge-obfs-xray.json" >/dev/null
 
 echo "== edge caddy =="
 jq -n -r -f "${ROOT}/lib/caddy.jq" \
@@ -49,6 +61,7 @@ jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/exit-xray.json" >/dev
 if command -v xray >/dev/null 2>&1; then
     echo "== xray -test =="
     xray run -test -config "${OUT}/edge-xray.json"
+    xray run -test -config "${OUT}/edge-obfs-xray.json"
     xray run -test -config "${OUT}/exit-xray.json"
 else
     echo "skip xray -test (binary not installed)"

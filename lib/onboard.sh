@@ -62,6 +62,20 @@ kokoro_onboard_edge() {
         fi
     fi
 
+    if [[ "$mode" == "reality" || "$mode" == "tls" || "$mode" == "both" ]]; then
+        local xhttp_obfs
+        read -r -p "Enable XHTTP obfs/xmux? [y/N]: " xhttp_obfs
+        if [[ "$xhttp_obfs" =~ ^[Yy]$ ]]; then
+            kokoro_cfg_set_str '.inbound.xhttp.mode' 'packet-up'
+            kokoro_cfg_set '.inbound.xhttp.obfs' 'true'
+            kokoro_cfg_set '.inbound.xhttp.xmux' 'true'
+        else
+            kokoro_cfg_set_str '.inbound.xhttp.mode' 'auto'
+            kokoro_cfg_set '.inbound.xhttp.obfs' 'false'
+            kokoro_cfg_set '.inbound.xhttp.xmux' 'false'
+        fi
+    fi
+
     kokoro_cfg_set '.tor.enabled' 'false'
     kokoro_onboard_firewall
 }

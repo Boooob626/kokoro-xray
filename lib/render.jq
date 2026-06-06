@@ -35,7 +35,8 @@ def reality_inbound: {
       privateKey: sec.inbound.reality.private_key,
       shortIds: sec.inbound.reality.short_ids
     },
-    xhttpSettings: { path: sec.inbound.xhttp_path }
+    xhttpSettings: { path: sec.inbound.xhttp_path },
+    sockopt: { trustedXForwardedFor: [] }
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
 };
@@ -52,7 +53,8 @@ def tls_inbound: {
   streamSettings: {
     network: "xhttp",
     security: "none",
-    xhttpSettings: { path: sec.inbound.xhttp_path }
+    xhttpSettings: { path: sec.inbound.xhttp_path },
+    sockopt: { trustedXForwardedFor: ["127.0.0.1"] }
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
 };

@@ -44,14 +44,19 @@ kokoro_exit_install() {
     if [[ -z "$(kokoro_cfg '.multinode.peer_edge_pubkey')" || "$(kokoro_cfg '.multinode.peer_edge_pubkey')" == "null" ]]; then
         if [[ -t 0 ]]; then
             local epub
-            read -r -p "Edge WG public key (from edge install): " epub
+            read -r -p "Edge WG public key (leave empty to pair later): " epub
             [[ -n "$epub" ]] && kokoro_cfg_set_str '.multinode.peer_edge_pubkey' "$epub"
         else
             kokoro_warn "multinode.peer_edge_pubkey not set — run: kokoro-xray pair"
         fi
     fi
 
-    kokoro_apply
+    if [[ -z "$(kokoro_cfg '.multinode.peer_edge_pubkey')" || "$(kokoro_cfg '.multinode.peer_edge_pubkey')" == "null" ]]; then
+        kokoro_warn "exit configured but not applied — missing edge WG public key"
+        kokoro_warn "install edge, run kokoro-xray pair, then run kokoro-xray apply on exit"
+    else
+        kokoro_apply
+    fi
     kokoro_network_tune || true
     kokoro_log "exit pubkey (paste on edge): $(kokoro_sec '.multinode.exit_wg_pubkey')"
     kokoro_log "open UDP $(kokoro_cfg '.multinode.exit_port') on firewall"

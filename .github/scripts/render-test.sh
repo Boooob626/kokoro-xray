@@ -33,7 +33,8 @@ jq -n -r -f "${ROOT}/lib/caddy.jq" \
     --slurpfile sec "${FIX}/edge-secrets.json" \
     >"${OUT}/Caddyfile"
 grep -q 'layer4' "${OUT}/Caddyfile"
-grep -q 'proxy 127.0.0.1:8443' "${OUT}/Caddyfile"
+grep -q 'listener_wrappers' "${OUT}/Caddyfile"
+grep -q 'proxy tcp/127.0.0.1:8443' "${OUT}/Caddyfile"
 
 echo "== exit xray =="
 jq -n -f "${ROOT}/lib/render.jq" \

@@ -3,7 +3,8 @@
 
 set -euo pipefail
 
-export KOKORO_ROOT="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+SCRIPT_PATH="$(readlink -f "$0")"
+export KOKORO_ROOT="$(cd -P -- "$(dirname -- "$SCRIPT_PATH")" && pwd -P)"
 source "${KOKORO_ROOT}/lib/common.sh"
 
 kokoro_ensure_state

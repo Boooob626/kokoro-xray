@@ -13,6 +13,7 @@ kokoro_caddy_install() {
 
     if [[ -x "$dest" ]] && "$dest" list-modules 2>/dev/null | grep -q 'layer4'; then
         kokoro_log "caddy with layer4 already installed"
+        kokoro_caddy_install_service
         return
     fi
 
@@ -32,4 +33,31 @@ kokoro_caddy_install() {
         "$dest" list-modules 2>/dev/null | grep -q 'layer4' || kokoro_die "caddy-l4 module missing after xcaddy build"
     fi
     kokoro_log "caddy installed to ${dest}"
+    kokoro_caddy_install_service
+}
+
+kokoro_caddy_install_service() {
+    local caddy_bin caddyfile
+    caddy_bin="$(kokoro_cfg '.paths.caddy_bin')"
+    caddyfile="$(kokoro_cfg '.paths.caddyfile')"
+    install -d "$(dirname "$caddyfile")"
+    cat >/etc/systemd/system/caddy.service <<EOF
+[Unit]
+Description=Caddy Service (kokoro-xray)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=${caddy_bin} run --environ --config ${caddyfile}
+ExecReload=${caddy_bin} reload --config ${caddyfile} --force
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable caddy >/dev/null 2>&1 || true
 }

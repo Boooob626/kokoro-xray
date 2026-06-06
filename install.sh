@@ -18,6 +18,27 @@ log() { echo -e "${GREEN}[kokoro]${NC} $*"; }
 
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
+install_bootstrap_deps() {
+    if command -v git >/dev/null 2>&1; then
+        return 0
+    fi
+    if [[ -f /etc/os-release ]]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        case "${ID:-}" in
+            debian | ubuntu)
+                apt-get update -qq
+                DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl git
+                ;;
+            *)
+                die "git required for remote install (unsupported OS: ${ID:-unknown})"
+                ;;
+        esac
+    else
+        die "git required for remote install"
+    fi
+}
+
 install_local() {
     local src="$SCRIPT_DIR"
     [[ -f "${src}/kokoro-xray.sh" ]] || die "run from repo root or set KOKORO_REPO_URL"
@@ -29,7 +50,7 @@ install_local() {
 }
 
 install_remote() {
-    command -v git >/dev/null 2>&1 || die "git required for remote install"
+    install_bootstrap_deps
     rm -rf "$INSTALL_DIR"
     git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"

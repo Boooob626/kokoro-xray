@@ -12,11 +12,12 @@ HOME="$tmp_home" KOKORO_ROOT="$ROOT" bash <<'SCRIPT'
 set -euo pipefail
 source "${KOKORO_ROOT}/lib/link.sh"
 
+expected_pbk="$(kokoro_sec '.inbound.reality.public_key')"
 reality="$(kokoro_link_reality_url | tr -d '\n')"
 [[ "$reality" == vless://* ]]
 [[ "$reality" == *"security=reality"* ]]
 [[ "$reality" == *"type=xhttp"* ]]
-[[ "$reality" == *"pbk=xAnzG8wXnOp5lN8vK2mR3sT4uV5wX6yZ7aB8cD9eF0="* ]]
+[[ "$reality" == *"pbk=${expected_pbk}"* ]]
 
 tls="$(kokoro_link_tls_url | tr -d '\n')"
 [[ "$tls" == vless://* ]]

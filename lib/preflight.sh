@@ -36,6 +36,11 @@ kokoro_preflight_paths() {
     done
 }
 
+kokoro_preflight_port() {
+    local value="$1" name="$2"
+    [[ "$value" =~ ^[0-9]+$ && "$value" -ge 1 && "$value" -le 65535 ]] || kokoro_die "invalid port for $name: $value"
+}
+
 kokoro_preflight_edge() {
     local mode="$1" cdn
     case "$mode" in
@@ -64,12 +69,14 @@ kokoro_preflight_edge() {
         [[ -n "$(kokoro_sec '.multinode.edge_wg_privkey')" ]] || kokoro_die "missing edge WG private key"
         [[ -n "$(kokoro_cfg '.multinode.peer_exit_pubkey')" ]] || kokoro_die "missing multinode.peer_exit_pubkey"
         [[ -n "$(kokoro_cfg '.multinode.exit_ip')" ]] || kokoro_die "missing multinode.exit_ip"
+        kokoro_preflight_port "$(kokoro_cfg '.multinode.exit_port')" "multinode.exit_port"
     fi
 }
 
 kokoro_preflight_exit() {
     [[ -n "$(kokoro_sec '.multinode.exit_wg_privkey')" ]] || kokoro_die "missing exit WG private key"
     [[ -n "$(kokoro_cfg '.multinode.peer_edge_pubkey')" ]] || kokoro_die "missing multinode.peer_edge_pubkey (run pair)"
+    kokoro_preflight_port "$(kokoro_cfg '.multinode.exit_port')" "multinode.exit_port"
 
     if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
         [[ -n "$(kokoro_cfg '.multinode.peer_edge_pubkey')" ]] || kokoro_die "pair edge before enabling Tor"

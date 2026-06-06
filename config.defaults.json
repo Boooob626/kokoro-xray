@@ -26,12 +26,12 @@
   "multinode": {
     "enabled": false,
     "exit_ip": "",
-    "exit_port": 51820,
+    "exit_port": 0,
     "peer_exit_pubkey": "",
     "peer_edge_pubkey": "",
     "local_wg_ip": "10.66.0.2",
     "peer_wg_ip": "10.66.0.1",
-    "finalmask": true
+    "finalmask": false
   },
   "tor": {
     "enabled": false,

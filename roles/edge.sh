@@ -60,18 +60,24 @@ kokoro_edge_install() {
     if [[ -t 0 && "$(kokoro_cfg '.multinode.enabled')" != "true" ]]; then
         read -r -p "Enable multinode WG to exit? [y/N] " mn
         if [[ "$mn" =~ ^[Yy]$ ]]; then
-            local ip pub
+            local ip port pub fm
             read -r -p "Exit node IP: " ip
+            read -r -p "Exit WG UDP port: " port
+            [[ "$port" =~ ^[0-9]+$ && "$port" -ge 1 && "$port" -le 65535 ]] || kokoro_die "invalid exit WG UDP port: $port"
             read -r -p "Exit WG public key: " pub
             kokoro_cfg_set_str '.multinode.exit_ip' "$ip"
+            kokoro_cfg_set '.multinode.exit_port' "$port"
             kokoro_cfg_set_str '.multinode.peer_exit_pubkey' "$pub"
             kokoro_cfg_set '.multinode.enabled' 'true'
+            read -r -p "Use experimental FinalMask WG header? [y/N] " fm
+            [[ "$fm" =~ ^[Yy]$ ]] && kokoro_cfg_set '.multinode.finalmask' 'true' || kokoro_cfg_set '.multinode.finalmask' 'false'
         fi
     fi
 
     kokoro_apply
     kokoro_network_tune || true
     if [[ "$(kokoro_cfg '.multinode.enabled')" == "true" ]]; then
+        kokoro_log "edge routes all outbound traffic to exit $(kokoro_cfg '.multinode.exit_ip'):$(kokoro_cfg '.multinode.exit_port')/udp"
         kokoro_log "edge pubkey (paste on exit): $(kokoro_sec '.multinode.edge_wg_pubkey')"
     fi
 }

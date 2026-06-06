@@ -79,8 +79,15 @@ fi
 log "installed to ${INSTALL_DIR}"
 log "run: kokoro-xray"
 
+run_installed() {
+    if [[ ! -t 0 && -r /dev/tty ]]; then
+        exec "$@" </dev/tty
+    fi
+    exec "$@"
+}
+
 case "${1:-}" in
-    --edge) exec "${INSTALL_DIR}/kokoro-xray.sh" edge "${@:2}" ;;
-    --exit) exec "${INSTALL_DIR}/kokoro-xray.sh" exit "${@:2}" ;;
-    *) exec "${INSTALL_DIR}/kokoro-xray.sh" "${@:1}" ;;
+    --edge) run_installed "${INSTALL_DIR}/kokoro-xray.sh" edge "${@:2}" ;;
+    --exit) run_installed "${INSTALL_DIR}/kokoro-xray.sh" exit "${@:2}" ;;
+    *) run_installed "${INSTALL_DIR}/kokoro-xray.sh" "${@:1}" ;;
 esac

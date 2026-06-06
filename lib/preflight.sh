@@ -9,6 +9,7 @@ kokoro_preflight() {
     role="$(kokoro_cfg '.role')"
     mode="$(kokoro_cfg '.inbound.mode')"
 
+    kokoro_preflight_paths
     [[ -n "$role" && "$role" != "null" ]] || kokoro_die "role not set (edge or exit)"
 
     case "$role" in
@@ -22,6 +23,17 @@ kokoro_preflight() {
     fi
 
     kokoro_check_secret_perms
+}
+
+kokoro_preflight_paths() {
+    local key value
+    for key in \
+        '.paths.xray_config' \
+        '.paths.xray_bin' \
+        '.paths.geo_dir'; do
+        value="$(kokoro_cfg "$key")"
+        [[ -n "$value" && "$value" != "null" ]] || kokoro_die "missing required config path: $key"
+    done
 }
 
 kokoro_preflight_edge() {

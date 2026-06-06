@@ -5,6 +5,8 @@ source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 kokoro_migrate() {
     local ver tmp
+    kokoro_migrate_merge_defaults
+
     ver="$(kokoro_cfg '.version // "0.1.0"')"
 
     if [[ "$ver" == "0.1.0" ]]; then
@@ -19,6 +21,24 @@ kokoro_migrate() {
             "${KOKORO_CONFIG}" >"$tmp"
         mv "$tmp" "${KOKORO_CONFIG}"
     fi
+}
+
+kokoro_migrate_merge_defaults() {
+    local tmp
+
+    tmp="$(mktemp)"
+    jq -s '.[0] * .[1]' \
+        "${KOKORO_ROOT}/config.defaults.json" \
+        "${KOKORO_CONFIG}" >"$tmp"
+    mv "$tmp" "${KOKORO_CONFIG}"
+    chmod 644 "${KOKORO_CONFIG}"
+
+    tmp="$(mktemp)"
+    jq -s '.[0] * .[1]' \
+        "${KOKORO_ROOT}/secrets.defaults.json" \
+        "${KOKORO_SECRETS}" >"$tmp"
+    mv "$tmp" "${KOKORO_SECRETS}"
+    chmod 600 "${KOKORO_SECRETS}"
 }
 
 kokoro_migrate_v010_to_v020() {

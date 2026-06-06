@@ -95,7 +95,6 @@ def single_node_block_rules: [
   { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
   { type: "field", domain: ["geosite:cn"], outboundTag: "BLOCK" },
   { type: "field", ip: ["geoip:cn"], outboundTag: "BLOCK" },
-  { type: "field", domain: ["geosite:ru"], outboundTag: "BLOCK" },
   { type: "field", ip: ["geoip:ru"], outboundTag: "BLOCK" }
 ];
 

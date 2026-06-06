@@ -24,7 +24,7 @@ jq -n -f "${ROOT}/lib/render.jq" \
     >"${OUT}/edge-single-xray.json"
 jq -e '(.outbounds | map(.tag) | index("WG_TO_EXIT")) | not' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[0].domain[0] == "geosite:google"' "${OUT}/edge-single-xray.json" >/dev/null
-jq -e '.routing.rules | map(select(.domain[]? == "geosite:ru")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules | map(select(.ip[]? == "geoip:ru")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/edge-single-xray.json" >/dev/null
 
 echo "== edge caddy =="

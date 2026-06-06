@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# kokoro-xray — main menu
+# kokoro-xray — main entrypoint
 
 set -euo pipefail
 
-ROOT="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-# shellcheck source=lib/common.sh
-source "${ROOT}/lib/common.sh"
+export KOKORO_ROOT="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+source "${KOKORO_ROOT}/lib/common.sh"
 
-kokoro_ensure_config
+kokoro_ensure_state
 kokoro_load_i18n
 
 menu() {
@@ -16,62 +15,68 @@ menu() {
     echo "  1) $(kokoro_t menu_edge)"
     echo "  2) $(kokoro_t menu_exit)"
     echo "  3) $(kokoro_t menu_link)"
-    echo "  4) $(kokoro_t menu_tor_on)"
-    echo "  5) $(kokoro_t menu_tor_off)"
-    echo "  6) $(kokoro_t menu_multinode)"
-    echo "  7) $(kokoro_t menu_validate)"
+    echo "  4) $(kokoro_t menu_apply)"
+    echo "  5) $(kokoro_t menu_pair)"
+    echo "  6) $(kokoro_t menu_tor_on)"
+    echo "  7) $(kokoro_t menu_tor_off)"
+    echo "  8) $(kokoro_t menu_status)"
+    echo "  9) $(kokoro_t menu_validate)"
     echo "  q) $(kokoro_t menu_quit)"
     echo ""
 }
 
-kokoro_multinode_prompt() {
-    local ip pub
-    read -r -p "$(kokoro_t prompt_exit_ip): " ip
-    read -r -p "$(kokoro_t prompt_exit_pubkey): " pub
-    kokoro_cfg_set_str '.multinode.exit_ip' "$ip"
-    kokoro_cfg_set_str '.multinode.exit_pubkey' "$pub"
-    kokoro_cfg_set '.multinode.enabled' 'true'
-    kokoro_log "$(kokoro_t multinode_saved)"
+kokoro_dispatch() {
+    local cmd="${1:-}"
+    shift || true
+    case "$cmd" in
+        edge)    bash "${KOKORO_ROOT}/roles/edge.sh" "$@" ;;
+        exit)    bash "${KOKORO_ROOT}/roles/exit.sh" "$@" ;;
+        link)    bash "${KOKORO_ROOT}/roles/client.sh" ;;
+        apply)   source "${KOKORO_ROOT}/lib/apply.sh"; kokoro_apply ;;
+        pair)    bash "${KOKORO_ROOT}/roles/pair.sh" ;;
+        status)  source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
+        validate) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
+        tor)
+            case "${1:-}" in
+                on)  source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_enable ;;
+                off) source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_disable ;;
+                *) kokoro_die "usage: kokoro-xray tor on|off" ;;
+            esac ;;
+        geodata)
+            source "${KOKORO_ROOT}/lib/geodata.sh"
+            kokoro_need_root
+            kokoro_geodata_update
+            ;;
+        *)
+            return 1
+            ;;
+    esac
 }
 
-case "${1:-}" in
-    edge)
-        bash "${ROOT}/roles/edge.sh" ;;
-    exit)
-        bash "${ROOT}/roles/exit.sh" ;;
-    link)
-        bash "${ROOT}/roles/client.sh" ;;
-    validate)
-        bash "${ROOT}/lib/validate.sh" ;;
-    *)
-        if [[ ! -t 0 ]]; then
-            menu
-            exit 0
-        fi
-        while true; do
-            menu
-            read -r -p "$(kokoro_t menu_choice): " choice
-            case "$choice" in
-                1) bash "${ROOT}/roles/edge.sh" ;;
-                2) bash "${ROOT}/roles/exit.sh" ;;
-                3) bash "${ROOT}/roles/client.sh" ;;
-                4)
-                    source "${ROOT}/lib/tor.sh"
-                    kokoro_tor_enable
-                    ;;
-                5)
-                    source "${ROOT}/lib/tor.sh"
-                    kokoro_tor_disable
-                    ;;
-                6) kokoro_multinode_prompt ;;
-                7)
-                    source "${ROOT}/lib/validate.sh"
-                    kokoro_validate
-                    ;;
-                q|Q) exit 0 ;;
-                *) kokoro_warn "$(kokoro_t invalid_choice)" ;;
-            esac
-            echo ""
-        done
-        ;;
-esac
+if kokoro_dispatch "${1:-}" "${@:2}"; then
+    exit 0
+fi
+
+if [[ ! -t 0 ]]; then
+    menu
+    exit 0
+fi
+
+while true; do
+    menu
+    read -r -p "$(kokoro_t menu_choice): " choice
+    case "$choice" in
+        1) bash "${KOKORO_ROOT}/roles/edge.sh" --keep-secrets ;;
+        2) bash "${KOKORO_ROOT}/roles/exit.sh" --keep-secrets ;;
+        3) bash "${KOKORO_ROOT}/roles/client.sh" ;;
+        4) source "${KOKORO_ROOT}/lib/apply.sh"; kokoro_apply ;;
+        5) bash "${KOKORO_ROOT}/roles/pair.sh" ;;
+        6) source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_enable ;;
+        7) source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_disable ;;
+        8) source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
+        9) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
+        q|Q) exit 0 ;;
+        *) kokoro_warn "$(kokoro_t invalid_choice)" ;;
+    esac
+    echo ""
+done

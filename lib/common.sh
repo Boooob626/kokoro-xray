@@ -13,81 +13,108 @@ readonly NC='\033[0m'
 
 readonly KOKORO_HOME="${HOME}/.kokoro-xray"
 readonly KOKORO_CONFIG="${KOKORO_HOME}/config.json"
+readonly KOKORO_SECRETS="${KOKORO_HOME}/secrets.json"
+readonly KOKORO_LAST_GOOD="${KOKORO_HOME}/last-good"
 
-kokoro_project_root() {
-    local src="${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}"
-    local dir
-    dir="$(cd -P -- "$(dirname -- "$src")/.." && pwd -P)"
-    printf '%s\n' "$dir"
+# Set by kokoro-xray.sh entrypoint; fallback for direct lib sourcing
+: "${KOKORO_ROOT:=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)}"
+export KOKORO_ROOT
+
+kokoro_ensure_state() {
+    install -d -m 700 "${KOKORO_HOME}"
+    install -d -m 700 "${KOKORO_LAST_GOOD}"
+    if [[ ! -f "${KOKORO_CONFIG}" ]]; then
+        cp "${KOKORO_ROOT}/config.defaults.json" "${KOKORO_CONFIG}"
+        chmod 644 "${KOKORO_CONFIG}"
+    fi
+    if [[ ! -f "${KOKORO_SECRETS}" ]]; then
+        cp "${KOKORO_ROOT}/secrets.defaults.json" "${KOKORO_SECRETS}"
+        chmod 600 "${KOKORO_SECRETS}"
+    fi
+    if [[ -f "${KOKORO_ROOT}/lib/migrate.sh" ]]; then
+        # shellcheck source=lib/migrate.sh
+        source "${KOKORO_ROOT}/lib/migrate.sh"
+        kokoro_migrate 2>/dev/null || true
+    fi
 }
 
-kokoro_ensure_config() {
-    mkdir -p "${KOKORO_HOME}"
-    if [[ ! -f "${KOKORO_CONFIG}" ]]; then
-        cp "$(kokoro_project_root)/config.defaults.json" "${KOKORO_CONFIG}"
+kokoro_ensure_config() { kokoro_ensure_state; }
+
+kokoro_check_secret_perms() {
+    local perms
+    perms="$(stat -c '%a' "${KOKORO_SECRETS}" 2>/dev/null || echo '')"
+    if [[ "$perms" != "600" && "$perms" != "400" ]]; then
+        kokoro_warn "secrets.json should be mode 600 (got ${perms:-unknown})"
+        chmod 600 "${KOKORO_SECRETS}" 2>/dev/null || true
     fi
 }
 
 kokoro_cfg() {
-    local query="$1"
-    jq -r "$query" "${KOKORO_CONFIG}"
+    jq -r "$1" "${KOKORO_CONFIG}"
 }
 
 kokoro_cfg_set() {
-    local query="$1"
-    local value="$2"
     local tmp
     tmp="$(mktemp)"
-    jq "$query = $value" "${KOKORO_CONFIG}" >"$tmp"
+    jq "$1 = $2" "${KOKORO_CONFIG}" >"$tmp"
     mv "$tmp" "${KOKORO_CONFIG}"
 }
 
 kokoro_cfg_set_str() {
-    local key="$1"
-    local value="$2"
     local tmp
     tmp="$(mktemp)"
-    jq --arg v "$value" "$key = \$v" "${KOKORO_CONFIG}" >"$tmp"
+    jq --arg v "$2" "$1 = \$v" "${KOKORO_CONFIG}" >"$tmp"
     mv "$tmp" "${KOKORO_CONFIG}"
 }
 
-kokoro_log() {
-    echo -e "${GREEN}[kokoro]${NC} $*"
+kokoro_sec() {
+    jq -r "$1" "${KOKORO_SECRETS}"
 }
 
-kokoro_warn() {
-    echo -e "${YELLOW}[warn]${NC} $*" >&2
+kokoro_sec_set_str() {
+    local tmp
+    tmp="$(mktemp)"
+    jq --arg v "$2" "$1 = \$v" "${KOKORO_SECRETS}" >"$tmp"
+    mv "$tmp" "${KOKORO_SECRETS}"
+    chmod 600 "${KOKORO_SECRETS}"
 }
 
-kokoro_die() {
-    echo -e "${RED}[error]${NC} $*" >&2
-    exit 1
+kokoro_sec_set() {
+    local tmp
+    tmp="$(mktemp)"
+    jq "$1 = $2" "${KOKORO_SECRETS}" >"$tmp"
+    mv "$tmp" "${KOKORO_SECRETS}"
+    chmod 600 "${KOKORO_SECRETS}"
 }
+
+kokoro_log() { echo -e "${GREEN}[kokoro]${NC} $*"; }
+kokoro_warn() { echo -e "${YELLOW}[warn]${NC} $*" >&2; }
+kokoro_die() { echo -e "${RED}[error]${NC} $*" >&2; exit 1; }
 
 kokoro_need_root() {
     [[ "${EUID}" -eq 0 ]] || kokoro_die "run as root"
 }
 
 kokoro_need_cmd() {
-    local cmd="$1"
-    command -v "$cmd" >/dev/null 2>&1 || kokoro_die "missing command: $cmd"
+    command -v "$1" >/dev/null 2>&1 || kokoro_die "missing command: $1"
 }
 
 kokoro_load_i18n() {
-    local root lang file
-    root="$(kokoro_project_root)"
+    local lang file
     lang="$(kokoro_cfg '.language')"
     if [[ "$lang" == "auto" || -z "$lang" || "$lang" == "null" ]]; then
         lang="${LANG%%_*}"
         lang="${lang:-en}"
     fi
-    file="${root}/i18n/${lang}.json"
-    [[ -f "$file" ]] || file="${root}/i18n/en.json"
+    file="${KOKORO_ROOT}/i18n/${lang}.json"
+    [[ -f "$file" ]] || file="${KOKORO_ROOT}/i18n/en.json"
     [[ -f "$file" ]] || kokoro_die "i18n file not found"
     KOKORO_I18N_FILE="$file"
 }
 
 kokoro_t() {
-    local key="$1"
-    jq -r --arg k "$key" '.[$k] // $k' "${KOKORO_I18N_FILE}"
+    jq -r --arg k "$1" '.[$k] // $k' "${KOKORO_I18N_FILE}"
 }
+
+# Backward compat shim (removed in v0.2)
+kokoro_project_root() { printf '%s\n' "${KOKORO_ROOT}"; }

@@ -1,84 +1,62 @@
 # kokoro-xray
 
-Minimal pure-shell Xray manager. Rebuild of the Xray-script philosophy without Nginx compilation bloat.
+Minimal pure-shell Xray manager. Shell dispatches, jq renders.
 
 ## Features
 
-- **Edge node** — VLESS + XHTTP + REALITY and/or TLS (Cloudflare CDN)
-- **Exit node** — Xray-core WireGuard inbound (FinalMask optional)
-- **Multi-hop** — Edge routes selected traffic to exit via WG tunnel
-- **Tor** — `.onion` outbound via local Tor SOCKS
-- **Caddy** — TLS termination and CDN origin (replaces Nginx)
-- **Pure shell** — bash + jq at runtime; Python only in CI (future)
+- Edge: VLESS + XHTTP + REALITY and/or TLS (Cloudflare CDN)
+- Exit: Xray-core WireGuard inbound (FinalMask optional)
+- Multi-hop: edge routes traffic to exit via WG tunnel
+- Tor: `.onion` outbound via local Tor SOCKS
+- Caddy: xcaddy + caddy-l4 for REALITY/TLS SNI split on `:443`
 
 ## Quick start
 
 ```bash
-# From this repo (local dev)
-sudo bash install.sh
+# Install
+curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo bash
 
-# Edge (DE VPS)
-sudo kokoro-xray edge
-
-# Exit (NL VPS) — copy pubkey to edge
+# Exit node (NL) first
 sudo kokoro-xray exit
 
-# Share links
+# Edge node (DE)
+sudo kokoro-xray edge
+
+# Pair / apply / links
+sudo kokoro-xray pair
+sudo kokoro-xray apply
 kokoro-xray link
+kokoro-xray status
 ```
 
-Edit `~/.kokoro-xray/config.json` before install to set domains:
+## Commands
 
-```json
-{
-  "inbound": {
-    "mode": "both",
-    "tls": {
-      "cdn_domain": "cdn.example.com"
-    }
-  }
-}
-```
+| Command | Description |
+|---------|-------------|
+| `edge [--keep-secrets]` | Install/update edge |
+| `exit [--keep-secrets]` | Install/update exit |
+| `apply` | Render → validate → reload |
+| `pair` | Exchange WG peer keys |
+| `link` | Share URLs |
+| `status` | Service + peer health |
+| `tor on\|off` | Toggle Tor routing + apply |
+| `geodata` | Update geoip/geosite |
+
+## Config
+
+- Settings: `~/.kokoro-xray/config.json`
+- Secrets: `~/.kokoro-xray/secrets.json` (mode 600)
 
 ## Architecture
 
-```
-Client ──[VLESS XHTTP REALITY/TLS]──► Edge (DE) ──[WireGuard]──► Exit (NL) ──► Internet
-                                         │
-                                         ├── .onion → Tor
-                                         └── other → direct / routed
-```
-
-## Layout
-
-```
-kokoro-xray.sh      main menu
-install.sh          bootstrap → /opt/kokoro-xray
-lib/                common, xray, caddy, tor, keys, render, validate
-roles/              edge, exit, client
-templates/          xray JSON + Caddyfile
-~/.kokoro-xray/     runtime config
-```
-
-## Defaults
-
-| Setting | Value |
-|---------|-------|
-| Install | bare-metal systemd |
-| WG obfuscation | FinalMask `header-wireguard` on |
-| Inbound | both REALITY + TLS |
-| Routing preset | AI traffic → exit node |
+See [docs/architecture.md](docs/architecture.md).
 
 ## Requirements
 
 - Debian 11+ or Ubuntu 20.04+
 - root
-- Edge: domain for CDN mode; open 443/tcp
-- Exit: open UDP 51820 (or custom port)
-
-## Status
-
-v0.1.0 scaffold — edge/exit install, template render, validate. Caddy L4 SNI split for `both` mode is planned (P3).
+- Edge: domain for CDN mode; ports 443/tcp, 80/tcp
+- Exit: UDP 51820 (or custom)
 
 ## License
 

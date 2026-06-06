@@ -1,0 +1,158 @@
+# kokoro-xray declarative xray config renderer
+# Usage: jq -f render.jq --slurpfile cfg config.json --slurpfile sec secrets.json
+
+def cfg: $cfg[0];
+def sec: $sec[0];
+def mode: cfg.inbound.mode;
+def role: cfg.role;
+
+def log_block: { log: { loglevel: "warning" } };
+
+def policy_block: {
+  policy: { levels: { "0": { handshake: 2, connIdle: 120 } } }
+};
+
+def reality_listen: if mode == "reality" then "0.0.0.0" else "127.0.0.1" end;
+def reality_port: if mode == "reality" then 443 else 8443 end;
+
+def reality_inbound: {
+  tag: "REALITY_XHTTP_IN",
+  listen: reality_listen,
+  port: reality_port,
+  protocol: "vless",
+  settings: {
+    clients: [{ id: sec.inbound.uuid, flow: "" }],
+    decryption: "none"
+  },
+  streamSettings: {
+    network: "xhttp",
+    security: "reality",
+    realitySettings: {
+      show: false,
+      dest: cfg.inbound.reality.dest,
+      xver: 0,
+      serverNames: cfg.inbound.reality.server_names,
+      privateKey: sec.inbound.reality.private_key,
+      shortIds: sec.inbound.reality.short_ids
+    },
+    xhttpSettings: { path: sec.inbound.xhttp_path }
+  },
+  sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
+};
+
+def tls_inbound: {
+  tag: "TLS_XHTTP_IN",
+  listen: "127.0.0.1",
+  port: 8444,
+  protocol: "vless",
+  settings: {
+    clients: [{ id: sec.inbound.uuid, flow: "" }],
+    decryption: "none"
+  },
+  streamSettings: {
+    network: "xhttp",
+    security: "none",
+    xhttpSettings: { path: sec.inbound.xhttp_path }
+  },
+  sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
+};
+
+def base_outbounds: [
+  { tag: "DIRECT", protocol: "freedom" },
+  { tag: "BLOCK", protocol: "blackhole" }
+];
+
+def tor_outbound: if cfg.tor.enabled then
+  [{ tag: "TOR", protocol: "socks", settings: { servers: [{ address: "127.0.0.1", port: cfg.tor.socks_port }] } }]
+else [] end;
+
+def wg_outbound: if cfg.multinode.enabled then
+  [{
+    tag: "WG_TO_EXIT",
+    protocol: "wireguard",
+    settings: {
+      secretKey: sec.multinode.edge_wg_privkey,
+      address: ["\((cfg.multinode.local_wg_ip))/32"],
+      peers: [{
+        publicKey: cfg.multinode.peer_exit_pubkey,
+        endpoint: "\(cfg.multinode.exit_ip):\(cfg.multinode.exit_port)",
+        allowedIPs: ["0.0.0.0/0", "::/0"]
+      }]
+    }
+  } + if cfg.multinode.finalmask then
+    { streamSettings: { finalmask: { udp: [{ type: "header-wireguard" }] } } }
+  else {} end]
+else [] end;
+
+def block_rules: [
+  { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
+  { type: "field", domain: ["geosite:private"], outboundTag: "BLOCK" },
+  { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
+  { type: "field", domain: ["geosite:cn"], outboundTag: "BLOCK" },
+  { type: "field", ip: ["geoip:cn"], outboundTag: "BLOCK" }
+];
+
+def tor_rules: if cfg.tor.enabled then
+  [{ type: "field", domain: ["regexp:\\.onion$"], outboundTag: "TOR" }]
+else [] end;
+
+def multinode_rules: if cfg.multinode.enabled then
+  if cfg.routing.preset == "all-to-exit" then
+    [{ type: "field", network: "tcp,udp", outboundTag: "WG_TO_EXIT" }]
+  else
+    [{ type: "field", domain: ["geosite:category-ai-!cn", "domain:openai.com", "domain:claude.ai", "domain:gemini.google.com"], outboundTag: "WG_TO_EXIT" }]
+  end
+else [] end;
+
+def edge_routing: {
+  domainStrategy: "IPIfNonMatch",
+  rules: tor_rules + multinode_rules + block_rules + [
+    { type: "field", network: "tcp,udp", outboundTag: "DIRECT" }
+  ]
+};
+
+def edge_inbounds:
+  (if mode == "reality" or mode == "both" then [reality_inbound] else [] end)
+  + (if mode == "tls" or mode == "both" then [tls_inbound] else [] end);
+
+def edge_config: log_block + {
+  inbounds: edge_inbounds,
+  outbounds: base_outbounds + tor_outbound + wg_outbound,
+  routing: edge_routing,
+  policy: policy_block.policy
+};
+
+def exit_inbound: {
+  tag: "WG_EXIT_IN",
+  listen: "0.0.0.0",
+  port: cfg.multinode.exit_port,
+  protocol: "wireguard",
+  settings: {
+    secretKey: sec.multinode.exit_wg_privkey,
+    mtu: 1420,
+    peers: [{
+      publicKey: cfg.multinode.peer_edge_pubkey,
+      allowedIPs: ["\((cfg.multinode.peer_wg_ip))/32"]
+    }]
+  }
+} + if cfg.multinode.finalmask then
+  { streamSettings: { finalmask: { udp: [{ type: "header-wireguard" }] } } }
+else {} end;
+
+def exit_config: log_block + {
+  inbounds: [exit_inbound],
+  outbounds: base_outbounds,
+  routing: {
+    domainStrategy: "IPIfNonMatch",
+    rules: [
+      { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
+      { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" }
+    ]
+  },
+  policy: policy_block.policy
+};
+
+if role == "edge" then edge_config
+elif role == "exit" then exit_config
+else error("unknown role: \(role)")
+end

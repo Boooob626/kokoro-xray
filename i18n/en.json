@@ -1,16 +1,15 @@
 {
   "menu_subtitle": "minimal shell xray manager",
-  "menu_edge": "Install edge node (DE)",
-  "menu_exit": "Install exit node (NL)",
+  "menu_edge": "Install / update edge node",
+  "menu_exit": "Install / update exit node",
   "menu_link": "Show share links",
+  "menu_apply": "Apply config (render + reload)",
+  "menu_pair": "Pair edge ↔ exit (WG keys)",
   "menu_tor_on": "Enable Tor (.onion) routing",
   "menu_tor_off": "Disable Tor routing",
-  "menu_multinode": "Link exit node (WG peer)",
+  "menu_status": "Show status",
   "menu_validate": "Validate configs",
   "menu_quit": "Quit",
   "menu_choice": "Choice",
-  "invalid_choice": "invalid choice",
-  "prompt_exit_ip": "Exit node IP",
-  "prompt_exit_pubkey": "Exit node WireGuard public key",
-  "multinode_saved": "multinode settings saved — re-run edge install or render to apply"
+  "invalid_choice": "invalid choice"
 }

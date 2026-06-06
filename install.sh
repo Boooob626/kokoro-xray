@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 # kokoro-xray — bootstrap installer
-#
-#   curl -fsSL .../install.sh | bash
-#   or: bash install.sh [--edge|--exit]
 
 set -euo pipefail
 
@@ -22,14 +19,12 @@ log() { echo -e "${GREEN}[kokoro]${NC} $*"; }
 SCRIPT_DIR="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
 install_local() {
-    src="$SCRIPT_DIR"
-    if [[ ! -f "${src}/kokoro-xray.sh" ]]; then
-        die "run from repo root or set KOKORO_REPO_URL"
-    fi
+    local src="$SCRIPT_DIR"
+    [[ -f "${src}/kokoro-xray.sh" ]] || die "run from repo root or set KOKORO_REPO_URL"
     install -d "$INSTALL_DIR"
     cp -a "${src}/." "$INSTALL_DIR/"
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
-    chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh
+    chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
 }
 
 install_remote() {
@@ -37,7 +32,7 @@ install_remote() {
     rm -rf "$INSTALL_DIR"
     git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
-    chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh
+    chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
 }
 
 if [[ -f "${SCRIPT_DIR}/kokoro-xray.sh" ]]; then
@@ -48,16 +43,21 @@ fi
 
 ln -sf "${INSTALL_DIR}/kokoro-xray.sh" /usr/local/bin/kokoro-xray
 
-mkdir -p "${HOME}/.kokoro-xray"
+install -d -m 700 "${HOME}/.kokoro-xray"
 if [[ ! -f "${HOME}/.kokoro-xray/config.json" ]]; then
     cp "${INSTALL_DIR}/config.defaults.json" "${HOME}/.kokoro-xray/config.json"
+    chmod 644 "${HOME}/.kokoro-xray/config.json"
+fi
+if [[ ! -f "${HOME}/.kokoro-xray/secrets.json" ]]; then
+    cp "${INSTALL_DIR}/secrets.defaults.json" "${HOME}/.kokoro-xray/secrets.json"
+    chmod 600 "${HOME}/.kokoro-xray/secrets.json"
 fi
 
 log "installed to ${INSTALL_DIR}"
 log "run: kokoro-xray"
 
 case "${1:-}" in
-    --edge) exec "${INSTALL_DIR}/kokoro-xray.sh" edge ;;
-    --exit) exec "${INSTALL_DIR}/kokoro-xray.sh" exit ;;
-    *) exec "${INSTALL_DIR}/kokoro-xray.sh" ;;
+    --edge) exec "${INSTALL_DIR}/kokoro-xray.sh" edge "${@:2}" ;;
+    --exit) exec "${INSTALL_DIR}/kokoro-xray.sh" exit "${@:2}" ;;
+    *) exec "${INSTALL_DIR}/kokoro-xray.sh" "${@:1}" ;;
 esac

@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 # kokoro-xray — share link generator
 
-source "$(cd -P -- "$(dirname -- "$0")/../lib" && pwd -P)/common.sh"
+export KOKORO_ROOT="$(cd -P -- "$(dirname -- "$0")/.." && pwd -P)"
+source "${KOKORO_ROOT}/lib/common.sh"
 
 kokoro_share_link() {
-    kokoro_ensure_config
-    local uuid path sni pub sid mode host security
-    uuid="$(kokoro_cfg '.inbound.uuid')"
-    path="$(kokoro_cfg '.inbound.xhttp_path')"
+    kokoro_ensure_state
+    local uuid path sni pub sid mode host security cdn
+    uuid="$(kokoro_sec '.inbound.uuid')"
+    path="$(kokoro_sec '.inbound.xhttp_path')"
     mode="$(kokoro_cfg '.inbound.mode')"
     sni="$(kokoro_cfg '.inbound.reality.server_names[0]')"
-    pub="$(kokoro_cfg '.inbound.reality.public_key')"
-    sid="$(kokoro_cfg '.inbound.reality.short_ids[0]')"
+    pub="$(kokoro_sec '.inbound.reality.public_key')"
+    sid="$(kokoro_sec '.inbound.reality.short_ids[0]')"
+    cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
 
     if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
-        host="$(kokoro_cfg '.inbound.tls.cdn_domain')"
+        host="${cdn}"
         security="tls"
         echo "vless://${uuid}@${host}:443?encryption=none&security=${security}&type=xhttp&path=${path}&host=${host}#kokoro-tls"
     fi

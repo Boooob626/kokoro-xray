@@ -1,18 +1,16 @@
+# Reference template — live Caddyfile is rendered by lib/caddy.jq
 {
+    servers {
+        layer4
+    }
     email admin@{{CDN_DOMAIN}}
 }
 
-# REALITY path: L4 passthrough — Caddy does not terminate TLS
 :443 {
     @reality tls sni {{REALITY_SNI}}
     handle @reality {
-        reverse_proxy 127.0.0.1:8443 {
-            transport http {
-                versions h2c
-            }
-        }
+        proxy 127.0.0.1:8443
     }
-
     @cdn tls sni {{CDN_DOMAIN}}
     handle @cdn {
         tls
@@ -24,7 +22,6 @@
     }
 }
 
-# CDN domain — XHTTP path to Xray (origin behind Cloudflare)
 {{CDN_DOMAIN}} {
     handle {{XHTTP_PATH}}* {
         reverse_proxy 127.0.0.1:8444 {

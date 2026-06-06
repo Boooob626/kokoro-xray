@@ -27,7 +27,19 @@ kokoro_migrate_merge_defaults() {
     local tmp
 
     tmp="$(mktemp)"
-    jq -s '.[0] * .[1]' \
+    jq -s '
+      .[0] as $d | (.[0] * .[1])
+      | .paths.xray_config = (if (.paths.xray_config // "") == "" then $d.paths.xray_config else .paths.xray_config end)
+      | .paths.caddyfile = (if (.paths.caddyfile // "") == "" then $d.paths.caddyfile else .paths.caddyfile end)
+      | .paths.xray_bin = (if (.paths.xray_bin // "") == "" then $d.paths.xray_bin else .paths.xray_bin end)
+      | .paths.caddy_bin = (if (.paths.caddy_bin // "") == "" then $d.paths.caddy_bin else .paths.caddy_bin end)
+      | .paths.geo_dir = (if (.paths.geo_dir // "") == "" then $d.paths.geo_dir else .paths.geo_dir end)
+      | .caddy.version = (if (.caddy.version // "") == "" then $d.caddy.version else .caddy.version end)
+      | .caddy.use_l4 = (.caddy.use_l4 // $d.caddy.use_l4)
+      | .firewall.enabled = (.firewall.enabled // $d.firewall.enabled)
+      | .firewall.ssh_port = (.firewall.ssh_port // $d.firewall.ssh_port)
+      | .firewall.extra_allow = (.firewall.extra_allow // $d.firewall.extra_allow)
+    ' \
         "${KOKORO_ROOT}/config.defaults.json" \
         "${KOKORO_CONFIG}" >"$tmp"
     mv "$tmp" "${KOKORO_CONFIG}"

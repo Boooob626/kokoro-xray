@@ -6,18 +6,20 @@ source "${KOKORO_ROOT}/lib/geodata.sh"
 
 KOKORO_XRAY_VERSION="${KOKORO_XRAY_VERSION:-v26.6.1}"
 
-kokoro_xray_required_path() {
-    local key value
-    key="$1"
-    value="$(kokoro_cfg "$key")"
-    [[ -n "$value" && "$value" != "null" ]] || kokoro_die "missing required config path: $key"
-    printf '%s\n' "$value"
+kokoro_xray_load_paths() {
+    dest="$(kokoro_cfg '.paths.xray_bin')"
+    geo_dir="$(kokoro_cfg '.paths.geo_dir')"
+    xray_config="$(kokoro_cfg '.paths.xray_config')"
+
+    [[ -n "$dest" && "$dest" != "null" ]] || kokoro_die "missing required config path: .paths.xray_bin"
+    [[ -n "$geo_dir" && "$geo_dir" != "null" ]] || kokoro_die "missing required config path: .paths.geo_dir"
+    [[ -n "$xray_config" && "$xray_config" != "null" ]] || kokoro_die "missing required config path: .paths.xray_config"
 }
 
 kokoro_xray_install() {
-    local arch zip url dest tmp
+    local arch zip url dest geo_dir xray_config tmp
     kokoro_need_root
-    dest="$(kokoro_xray_required_path '.paths.xray_bin')"
+    kokoro_xray_load_paths
     arch="$(uname -m)"
     case "$arch" in
         x86_64) arch="64" ;;
@@ -30,8 +32,8 @@ kokoro_xray_install() {
     curl -fsSL "$url" -o "${tmp}/${zip}"
     unzip -qo "${tmp}/${zip}" -d "$tmp"
     install -m 755 "${tmp}/xray" "$dest"
-    install -d "$(kokoro_xray_required_path '.paths.geo_dir')"
-    install -m 644 "${tmp}/geoip.dat" "${tmp}/geosite.dat" "$(kokoro_xray_required_path '.paths.geo_dir')/"
+    install -d "$geo_dir"
+    install -m 644 "${tmp}/geoip.dat" "${tmp}/geosite.dat" "$geo_dir/"
     rm -rf "$tmp"
     kokoro_xray_install_service
     kokoro_log "xray ${KOKORO_XRAY_VERSION} installed"

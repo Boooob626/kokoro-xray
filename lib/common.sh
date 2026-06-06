@@ -26,9 +26,15 @@ export KOKORO_ROOT
 kokoro_ensure_state() {
     install -d -m 700 "${KOKORO_HOME}"
     install -d -m 700 "${KOKORO_LAST_GOOD}"
+    if [[ -f "${KOKORO_CONFIG}" ]] && { [[ ! -s "${KOKORO_CONFIG}" ]] || ! jq -e type "${KOKORO_CONFIG}" >/dev/null 2>&1; }; then
+        mv "${KOKORO_CONFIG}" "${KOKORO_CONFIG}.broken.$(date +%s)"
+    fi
     if [[ ! -f "${KOKORO_CONFIG}" ]]; then
         cp "${KOKORO_ROOT}/config.defaults.json" "${KOKORO_CONFIG}"
         chmod 644 "${KOKORO_CONFIG}"
+    fi
+    if [[ -f "${KOKORO_SECRETS}" ]] && { [[ ! -s "${KOKORO_SECRETS}" ]] || ! jq -e type "${KOKORO_SECRETS}" >/dev/null 2>&1; }; then
+        mv "${KOKORO_SECRETS}" "${KOKORO_SECRETS}.broken.$(date +%s)"
     fi
     if [[ ! -f "${KOKORO_SECRETS}" ]]; then
         cp "${KOKORO_ROOT}/secrets.defaults.json" "${KOKORO_SECRETS}"

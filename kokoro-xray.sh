@@ -21,6 +21,7 @@ menu() {
     echo "  7) $(kokoro_t menu_tor_off)"
     echo "  8) $(kokoro_t menu_status)"
     echo "  9) $(kokoro_t menu_validate)"
+    echo " 10) $(kokoro_t menu_reality_scan)"
     echo "  q) $(kokoro_t menu_quit)"
     echo ""
 }
@@ -47,6 +48,11 @@ kokoro_dispatch() {
             kokoro_need_root
             kokoro_geodata_update
             ;;
+        reality)
+            case "${1:-}" in
+                scan) shift; bash "${KOKORO_ROOT}/roles/reality-scan.sh" "$@" ;;
+                *) kokoro_die "usage: kokoro-xray reality scan [--apply]" ;;
+            esac ;;
         *)
             return 1
             ;;
@@ -75,6 +81,7 @@ while true; do
         7) source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_disable ;;
         8) source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
         9) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
+        10) bash "${KOKORO_ROOT}/roles/reality-scan.sh" --limit 10 ;;
         q|Q) exit 0 ;;
         *) kokoro_warn "$(kokoro_t invalid_choice)" ;;
     esac

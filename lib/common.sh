@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # kokoro-xray — shared constants and helpers
 
+[[ -n "${KOKORO_COMMON_LOADED:-}" ]] && return 0
+KOKORO_COMMON_LOADED=1
+
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 export PATH
 

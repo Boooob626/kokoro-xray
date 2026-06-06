@@ -9,6 +9,7 @@
   "menu_tor_off": "禁用 Tor 分流",
   "menu_status": "显示状态",
   "menu_validate": "验证配置",
+  "menu_reality_scan": "扫描 REALITY 目标",
   "menu_quit": "退出",
   "menu_choice": "请选择",
   "invalid_choice": "无效选项"

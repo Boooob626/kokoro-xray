@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # kokoro-xray — interactive edge onboarding
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+: "${KOKORO_ROOT:=$(cd -P -- "$(dirname -- "$0")/.." && pwd -P)}"
+source "${KOKORO_ROOT}/lib/common.sh"
 
 kokoro_onboard_edge() {
     local mode cdn email sni dest preset
@@ -23,12 +24,31 @@ kokoro_onboard_edge() {
     fi
 
     if [[ "$mode" == "reality" || "$mode" == "both" ]]; then
-        read -r -p "REALITY SNI [www.cloudflare.com]: " sni
-        sni="${sni:-www.cloudflare.com}"
-        kokoro_cfg_set '.inbound.reality.server_names' "[\"${sni}\"]"
-        read -r -p "REALITY dest [${sni}:443]: " dest
-        dest="${dest:-${sni}:443}"
-        kokoro_cfg_set_str '.inbound.reality.dest' "$dest"
+        read -r -p "Scan for REALITY target? [Y/n]: " do_scan
+        if [[ ! "$do_scan" =~ ^[Nn]$ ]]; then
+            # shellcheck source=lib/reality-scan.sh
+            source "${KOKORO_ROOT}/lib/reality-scan.sh"
+            if kokoro_reality_scan --limit 5 --apply; then
+                kokoro_log "REALITY target set from scan"
+            else
+                kokoro_warn "scan found no valid targets — enter manually"
+                local sni dest
+                read -r -p "REALITY SNI [www.sky.com]: " sni
+                sni="${sni:-www.sky.com}"
+                kokoro_cfg_set '.inbound.reality.server_names' "[\"${sni}\"]"
+                read -r -p "REALITY dest [${sni}:443]: " dest
+                dest="${dest:-${sni}:443}"
+                kokoro_cfg_set_str '.inbound.reality.dest' "$dest"
+            fi
+        else
+            local sni dest
+            read -r -p "REALITY SNI [www.sky.com]: " sni
+            sni="${sni:-www.sky.com}"
+            kokoro_cfg_set '.inbound.reality.server_names' "[\"${sni}\"]"
+            read -r -p "REALITY dest [${sni}:443]: " dest
+            dest="${dest:-${sni}:443}"
+            kokoro_cfg_set_str '.inbound.reality.dest' "$dest"
+        fi
     fi
 
     read -r -p "Routing preset [ai-to-exit/all-to-exit] (ai-to-exit): " preset

@@ -15,3 +15,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
       - name: Run render tests
         run: bash .github/scripts/render-test.sh
+      - name: Run reality-scan tests
+        run: bash .github/scripts/reality-scan-test.sh
+      - name: Live REALITY probe (github.com)
+        run: KOKORO_LIVE_SCAN=1 bash .github/scripts/reality-scan-test.sh

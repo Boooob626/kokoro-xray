@@ -29,6 +29,12 @@ preflight.sh → render.jq + caddy.jq → validate.sh → firewall.sh → reload
 | `tls` | — | Caddy L7 | Caddy |
 | `both` | Xray `127.0.0.1:8443` | Caddy L4 SNI split | Caddy (xcaddy + caddy-l4) |
 
+## REALITY scan
+
+`kokoro-xray reality scan` probes `data/reality-seeds.txt` plus optional `--domains` / `--file`.
+Each host is validated (not bulk-imported): TLS 1.3, ALPN h2, cert SAN, redirect rules.
+Rejects `apple`/`icloud` per Xray-core. Scores by latency + OCSP bonus.
+
 ## Multi-node pairing
 
 1. Install **exit** → copy `exit_wg_pubkey`

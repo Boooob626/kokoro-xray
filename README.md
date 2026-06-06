@@ -41,6 +41,23 @@ kokoro-xray status
 | `status` | Service + peer health |
 | `tor on\|off` | Toggle Tor routing + apply |
 | `geodata` | Update geoip/geosite |
+| `reality scan` | Probe hosts for TLS1.3+h2+SAN (no Apple/iCloud) |
+| `reality scan --apply` | Pick best target and write config.json |
+
+## REALITY target scan
+
+Validates candidates against [REALITY requirements](https://github.com/XTLS/REALITY/blob/main/README.en.md) — **not** a bulk third-party import:
+
+```bash
+# Scan curated seeds from data/reality-seeds.txt
+kokoro-xray reality scan
+
+# Probe your own list + apply best to config
+kokoro-xray reality scan --domains www.sky.com,github.com --apply
+sudo kokoro-xray apply
+```
+
+Checks: DNS, TLS 1.3, ALPN `h2`, cert SAN, redirect rules. Rejects `apple`/`icloud` (per Xray-core).
 
 ## Config
 

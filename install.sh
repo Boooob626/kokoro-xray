@@ -25,6 +25,7 @@ install_local() {
     cp -a "${src}/." "$INSTALL_DIR/"
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
     chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
+    chmod 644 "${INSTALL_DIR}/data/"*.txt 2>/dev/null || true
 }
 
 install_remote() {
@@ -33,6 +34,7 @@ install_remote() {
     git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
     chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
+    chmod 644 "${INSTALL_DIR}/data/"*.txt 2>/dev/null || true
 }
 
 if [[ -f "${SCRIPT_DIR}/kokoro-xray.sh" ]]; then

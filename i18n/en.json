@@ -9,6 +9,7 @@
   "menu_tor_off": "Disable Tor routing",
   "menu_status": "Show status",
   "menu_validate": "Validate configs",
+  "menu_reality_scan": "Scan REALITY targets",
   "menu_quit": "Quit",
   "menu_choice": "Choice",
   "invalid_choice": "invalid choice"

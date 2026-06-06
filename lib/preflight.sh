@@ -2,6 +2,7 @@
 # kokoro-xray — validate intent before render
 
 source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "${KOKORO_ROOT}/lib/firewall.sh"
 
 kokoro_preflight() {
     local role mode
@@ -15,6 +16,10 @@ kokoro_preflight() {
         exit) kokoro_preflight_exit ;;
         *) kokoro_die "unknown role: $role" ;;
     esac
+
+    if [[ "$(kokoro_cfg '.firewall.enabled // false')" == "true" ]]; then
+        kokoro_firewall_validate_extra
+    fi
 
     kokoro_check_secret_perms
 }
@@ -39,6 +44,10 @@ kokoro_preflight_edge() {
         [[ -n "$cdn" && "$cdn" != "null" ]] || kokoro_die "inbound.tls.cdn_domain required for tls/both mode"
     fi
 
+    if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
+        kokoro_die "Tor is exit-only — enable on exit node after pair (kokoro-xray tor on)"
+    fi
+
     if [[ "$(kokoro_cfg '.multinode.enabled')" == "true" ]]; then
         [[ -n "$(kokoro_sec '.multinode.edge_wg_privkey')" ]] || kokoro_die "missing edge WG private key"
         [[ -n "$(kokoro_cfg '.multinode.peer_exit_pubkey')" ]] || kokoro_die "missing multinode.peer_exit_pubkey"
@@ -49,4 +58,8 @@ kokoro_preflight_edge() {
 kokoro_preflight_exit() {
     [[ -n "$(kokoro_sec '.multinode.exit_wg_privkey')" ]] || kokoro_die "missing exit WG private key"
     [[ -n "$(kokoro_cfg '.multinode.peer_edge_pubkey')" ]] || kokoro_die "missing multinode.peer_edge_pubkey (run pair)"
+
+    if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
+        [[ -n "$(kokoro_cfg '.multinode.peer_edge_pubkey')" ]] || kokoro_die "pair edge before enabling Tor"
+    fi
 }

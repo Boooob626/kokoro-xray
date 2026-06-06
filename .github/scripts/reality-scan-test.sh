@@ -17,8 +17,29 @@ test_normalize() {
     echo "normalize OK"
 }
 
+test_apply_host() {
+    local tmp_home cfg
+    tmp_home="$(mktemp -d)"
+    install -d -m 700 "${tmp_home}/.kokoro-xray"
+    cfg="${tmp_home}/.kokoro-xray/config.json"
+    cp "${ROOT}/config.defaults.json" "$cfg"
+    cp "${ROOT}/secrets.defaults.json" "${tmp_home}/.kokoro-xray/secrets.json"
+
+    HOME="$tmp_home" bash -c "
+        export KOKORO_ROOT='${ROOT}'
+        source '${ROOT}/lib/common.sh'
+        source '${ROOT}/lib/reality-scan.sh'
+        kokoro_reality_apply_host 'www.example.com'
+    "
+    [[ "$(jq -r '.inbound.reality.dest' "$cfg")" == "www.example.com:443" ]]
+    [[ "$(jq -r '.inbound.reality.server_names[0]' "$cfg")" == "www.example.com" ]]
+    rm -rf "$tmp_home"
+    echo "apply_host OK"
+}
+
 test_blocked
 test_normalize
+test_apply_host
 
 # Live probe (optional, needs network)
 if [[ "${KOKORO_LIVE_SCAN:-}" == "1" ]]; then

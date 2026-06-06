@@ -4,13 +4,16 @@
 export KOKORO_ROOT="$(cd -P -- "$(dirname -- "$0")/.." && pwd -P)"
 KEEP_SECRETS=false
 FORCE_SECRETS=false
+KOKORO_APPLY_EDGE=false
 
 for arg in "$@"; do
     case "$arg" in
         --keep-secrets) KEEP_SECRETS=true ;;
         --force-secrets) FORCE_SECRETS=true ;;
+        --apply-edge) KOKORO_APPLY_EDGE=true ;;
     esac
 done
+export KOKORO_APPLY_EDGE
 
 source "${KOKORO_ROOT}/lib/common.sh"
 source "${KOKORO_ROOT}/lib/os.sh"
@@ -20,6 +23,7 @@ source "${KOKORO_ROOT}/lib/keys.sh"
 source "${KOKORO_ROOT}/lib/onboard.sh"
 source "${KOKORO_ROOT}/lib/cf.sh"
 source "${KOKORO_ROOT}/lib/apply.sh"
+source "${KOKORO_ROOT}/lib/network-tune.sh"
 
 kokoro_edge_install() {
     local mode
@@ -66,6 +70,7 @@ kokoro_edge_install() {
     fi
 
     kokoro_apply
+    kokoro_network_tune || true
     kokoro_log "edge pubkey (paste on exit): $(kokoro_sec '.multinode.edge_wg_pubkey')"
 }
 

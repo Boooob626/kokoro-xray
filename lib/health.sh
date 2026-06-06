@@ -11,14 +11,19 @@ kokoro_health() {
     echo "mode:     $(kokoro_cfg '.inbound.mode')"
     echo "xray:     $(systemctl is-active xray 2>/dev/null || echo unknown)"
 
+    if [[ -f "${KOKORO_ROOT}/lib/network-tune.sh" ]]; then
+        # shellcheck source=lib/network-tune.sh
+        source "${KOKORO_ROOT}/lib/network-tune.sh"
+        kokoro_network_tune_check >/dev/null 2>&1 \
+            && echo "network:  TFO+BBR ok" \
+            || echo "network:  tuning suboptimal (run: kokoro-xray tune)"
+    fi
+
     if [[ "$role" == "edge" ]]; then
         local mode
         mode="$(kokoro_cfg '.inbound.mode')"
         if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
             echo "caddy:    $(systemctl is-active caddy 2>/dev/null || echo unknown)"
-        fi
-        if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
-            echo "tor:      $(systemctl is-active tor 2>/dev/null || echo unknown)"
         fi
         if [[ "$(kokoro_cfg '.multinode.enabled')" == "true" ]]; then
             local ip port
@@ -35,5 +40,8 @@ kokoro_health() {
 
     if [[ "$role" == "exit" ]]; then
         echo "wg port:  $(kokoro_cfg '.multinode.exit_port')/udp"
+        if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
+            echo "tor:      $(systemctl is-active tor 2>/dev/null || echo unknown)"
+        fi
     fi
 }

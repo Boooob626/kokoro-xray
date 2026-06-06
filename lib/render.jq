@@ -62,7 +62,7 @@ def base_outbounds: [
   { tag: "BLOCK", protocol: "blackhole" }
 ];
 
-def tor_outbound: if cfg.tor.enabled then
+def exit_tor_outbound: if cfg.tor.enabled then
   [{ tag: "TOR", protocol: "socks", settings: { servers: [{ address: "127.0.0.1", port: cfg.tor.socks_port }] } }]
 else [] end;
 
@@ -84,32 +84,40 @@ def wg_outbound: if cfg.multinode.enabled then
   else {} end]
 else [] end;
 
-def block_rules: [
+# Single-node: allow Google (incl. .cn) before CN/RU blocks
+def google_direct_rules: [
+  { type: "field", domain: ["geosite:google"], outboundTag: "DIRECT" }
+];
+
+def single_node_block_rules: [
   { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
   { type: "field", domain: ["geosite:private"], outboundTag: "BLOCK" },
   { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
   { type: "field", domain: ["geosite:cn"], outboundTag: "BLOCK" },
-  { type: "field", ip: ["geoip:cn"], outboundTag: "BLOCK" }
+  { type: "field", ip: ["geoip:cn"], outboundTag: "BLOCK" },
+  { type: "field", domain: ["geosite:ru"], outboundTag: "BLOCK" },
+  { type: "field", ip: ["geoip:ru"], outboundTag: "BLOCK" }
 ];
 
-def tor_rules: if cfg.tor.enabled then
+def exit_tor_rules: if cfg.tor.enabled then
   [{ type: "field", domain: ["regexp:\\.onion$"], outboundTag: "TOR" }]
 else [] end;
 
-def multinode_rules: if cfg.multinode.enabled then
-  if cfg.routing.preset == "all-to-exit" then
-    [{ type: "field", network: "tcp,udp", outboundTag: "WG_TO_EXIT" }]
-  else
-    [{ type: "field", domain: ["geosite:category-ai-!cn", "domain:openai.com", "domain:claude.ai", "domain:gemini.google.com"], outboundTag: "WG_TO_EXIT" }]
-  end
-else [] end;
-
-def edge_routing: {
+def edge_single_routing: {
   domainStrategy: "IPIfNonMatch",
-  rules: tor_rules + multinode_rules + block_rules + [
+  rules: google_direct_rules + single_node_block_rules + [
     { type: "field", network: "tcp,udp", outboundTag: "DIRECT" }
   ]
 };
+
+def edge_multinode_routing: {
+  domainStrategy: "IPIfNonMatch",
+  rules: [
+    { type: "field", network: "tcp,udp", outboundTag: "WG_TO_EXIT" }
+  ]
+};
+
+def edge_routing: if cfg.multinode.enabled then edge_multinode_routing else edge_single_routing end;
 
 def edge_inbounds:
   (if mode == "reality" or mode == "both" then [reality_inbound] else [] end)
@@ -117,7 +125,7 @@ def edge_inbounds:
 
 def edge_config: log_block + {
   inbounds: edge_inbounds,
-  outbounds: base_outbounds + tor_outbound + wg_outbound,
+  outbounds: base_outbounds + wg_outbound,
   routing: edge_routing,
   policy: policy_block.policy
 };
@@ -141,12 +149,13 @@ else {} end;
 
 def exit_config: log_block + {
   inbounds: [exit_inbound],
-  outbounds: base_outbounds,
+  outbounds: base_outbounds + exit_tor_outbound,
   routing: {
     domainStrategy: "IPIfNonMatch",
-    rules: [
+    rules: exit_tor_rules + [
       { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
-      { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" }
+      { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
+      { type: "field", network: "tcp,udp", outboundTag: "DIRECT" }
     ]
   },
   policy: policy_block.policy

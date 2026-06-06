@@ -12,13 +12,25 @@ kokoro_tor_install() {
     kokoro_log "tor installed (socks 127.0.0.1:9050)"
 }
 
+kokoro_tor_require_exit() {
+    local role peer
+    role="$(kokoro_cfg '.role')"
+    [[ "$role" == "exit" ]] || kokoro_die "Tor runs on the exit node only (after multinode pair)"
+    peer="$(kokoro_cfg '.multinode.peer_edge_pubkey')"
+    [[ -n "$peer" && "$peer" != "null" ]] || kokoro_die "pair edge node first: kokoro-xray pair"
+}
+
 kokoro_tor_enable() {
+    kokoro_ensure_state
+    kokoro_tor_require_exit
     kokoro_tor_install
     kokoro_cfg_set '.tor.enabled' 'true'
     kokoro_apply
 }
 
 kokoro_tor_disable() {
+    kokoro_ensure_state
+    kokoro_tor_require_exit
     kokoro_cfg_set '.tor.enabled' 'false'
     kokoro_apply
 }

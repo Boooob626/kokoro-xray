@@ -16,12 +16,15 @@ source "${KOKORO_ROOT}/lib/common.sh"
 source "${KOKORO_ROOT}/lib/os.sh"
 source "${KOKORO_ROOT}/lib/xray.sh"
 source "${KOKORO_ROOT}/lib/keys.sh"
+source "${KOKORO_ROOT}/lib/onboard.sh"
 source "${KOKORO_ROOT}/lib/apply.sh"
+source "${KOKORO_ROOT}/lib/network-tune.sh"
 
 kokoro_exit_install() {
     kokoro_need_root
     kokoro_ensure_state
     kokoro_cfg_set_str '.role' 'exit'
+    kokoro_onboard_firewall
 
     kokoro_install_deps
     kokoro_xray_install
@@ -49,6 +52,7 @@ kokoro_exit_install() {
     fi
 
     kokoro_apply
+    kokoro_network_tune || true
     kokoro_log "exit pubkey (paste on edge): $(kokoro_sec '.multinode.exit_wg_pubkey')"
     kokoro_log "open UDP $(kokoro_cfg '.multinode.exit_port') on firewall"
 }

@@ -9,8 +9,8 @@
     "peer_wg_ip": "10.66.0.2",
     "finalmask": true
   },
-  "tor": { "enabled": false, "socks_port": 9050 },
-  "routing": { "preset": "ai-to-exit" },
+  "tor": { "enabled": true, "socks_port": 9050 },
+  "routing": {},
   "paths": {
     "xray_config": "/tmp/kokoro-test/config.json",
     "caddyfile": "/etc/caddy/Caddyfile",

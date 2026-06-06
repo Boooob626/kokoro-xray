@@ -183,14 +183,65 @@ kokoro_reality_collect_hosts() {
     done
 }
 
+kokoro_reality_apply_host() {
+    local host="$1"
+    host="$(kokoro_reality_normalize_host "$host")"
+    [[ -n "$host" ]] || kokoro_die "empty REALITY host"
+    kokoro_ensure_state
+    kokoro_cfg_set_str '.inbound.reality.dest' "${host}:443"
+    kokoro_cfg_set '.inbound.reality.server_names' "[\"${host}\"]"
+    kokoro_log "REALITY target: ${host}"
+}
+
+kokoro_reality_scan_pick() {
+    local tmp_ranked="$1" limit="$2" select="$3"
+    local n shown choice row host score
+
+    n="$(grep -c '^OK' "$tmp_ranked" 2>/dev/null || echo 0)"
+    [[ "$n" -gt 0 ]] || return 1
+    shown="$n"
+    [[ "$shown" -gt "$limit" ]] && shown="$limit"
+
+    if [[ "$select" == "true" && -t 0 ]]; then
+        echo ""
+        printf '%s\n' "#  host                             score latency tags"
+        awk -F'\t' -v lim="$shown" '
+            NR <= lim { printf " %d  %-32s %5s %5sms %s\n", NR, $5, $2, $3, $4 }
+        ' <(grep '^OK' "$tmp_ranked" | sort -t$'\t' -k2 -nr | head -n "$shown")
+        echo ""
+        while true; do
+            read -r -p "Choice [1-${shown}] (1=best): " choice
+            choice="${choice:-1}"
+            if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 && "$choice" -le "$shown" ]]; then
+                row="$(grep '^OK' "$tmp_ranked" | sort -t$'\t' -k2 -nr | sed -n "${choice}p")"
+                [[ -n "$row" ]] && break
+            fi
+            kokoro_warn "enter a number between 1 and ${shown}"
+        done
+        host="$(printf '%s' "$row" | awk -F'\t' '{print $5}')"
+        score="$(printf '%s' "$row" | awk -F'\t' '{print $2}')"
+        kokoro_reality_apply_host "$host"
+        kokoro_log "selected #${choice}: ${host} (score=${score})"
+        return 0
+    fi
+
+    row="$(grep '^OK' "$tmp_ranked" | sort -t$'\t' -k2 -nr | head -1)"
+    host="$(printf '%s' "$row" | awk -F'\t' '{print $5}')"
+    score="$(printf '%s' "$row" | awk -F'\t' '{print $2}')"
+    kokoro_reality_apply_host "$host"
+    kokoro_log "best: ${host} (score=${score})"
+    return 0
+}
+
 kokoro_reality_scan() {
-    local limit=15 apply=false jobs=6
+    local limit=15 apply=false select=false jobs=6
     local -a collect_args=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --limit) limit="$2"; shift 2 ;;
             --apply) apply=true; shift ;;
+            --select) select=true; shift ;;
             --jobs) jobs="$2"; shift 2 ;;
             --file|--domains) collect_args+=("$1" "$2"); shift 2 ;;
             -h|--help)
@@ -206,11 +257,13 @@ Usage:
   kokoro-xray reality scan --domains www.sky.com,github.com
   kokoro-xray reality scan --file extra-hosts.txt --limit 10
   kokoro-xray reality scan --apply
+  kokoro-xray reality scan --select
 
 Options:
   --limit N     Show top N (default 15)
   --jobs N      Parallel probes (default 6)
   --apply       Set best result in config.json
+  --select      Interactive menu — pick from ranked results
   --domains     Comma-separated hosts to probe
   --file        Extra hosts file (one per line)
 EOF
@@ -219,6 +272,10 @@ EOF
             *) collect_args+=("$1"); shift ;;
         esac
     done
+
+    if [[ "$apply" == "true" && "$select" == "true" ]]; then
+        kokoro_die "use --apply or --select, not both"
+    fi
 
     kokoro_need_cmd openssl
     kokoro_need_cmd curl
@@ -264,18 +321,20 @@ EOF
         return 1
     fi
 
-    local best best_host best_score
-    best="$(grep '^OK' "$tmp_out" | sort -t$'\t' -k2 -nr | head -1)"
-    best_host="$(printf '%s' "$best" | awk -F'\t' '{print $5}')"
-    best_score="$(printf '%s' "$best" | awk -F'\t' '{print $2}')"
-
-    echo ""
-    kokoro_log "best: ${best_host} (score=${best_score})"
-
-    if [[ "$apply" == "true" ]]; then
-        kokoro_cfg_set_str '.inbound.reality.dest' "${best_host}:443"
-        kokoro_cfg_set '.inbound.reality.server_names' "[\"${best_host}\"]"
-        kokoro_log "config updated — run: kokoro-xray apply"
+    if [[ "$apply" == "true" || "$select" == "true" ]]; then
+        if kokoro_reality_scan_pick "$tmp_out" "$limit" "$select"; then
+            kokoro_log "config updated — run: kokoro-xray apply"
+        else
+            rm -f "$tmp_hosts" "$tmp_out"
+            return 1
+        fi
+    else
+        local best best_host best_score
+        best="$(grep '^OK' "$tmp_out" | sort -t$'\t' -k2 -nr | head -1)"
+        best_host="$(printf '%s' "$best" | awk -F'\t' '{print $5}')"
+        best_score="$(printf '%s' "$best" | awk -F'\t' '{print $2}')"
+        echo ""
+        kokoro_log "best: ${best_host} (score=${best_score})"
     fi
 
     rm -f "$tmp_hosts" "$tmp_out"

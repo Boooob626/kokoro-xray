@@ -1,31 +1,6 @@
 #!/usr/bin/env bash
-# kokoro-xray — share link generator
+# kokoro-xray — share link + QR entry
 
 export KOKORO_ROOT="$(cd -P -- "$(dirname -- "$0")/.." && pwd -P)"
-source "${KOKORO_ROOT}/lib/common.sh"
-
-kokoro_share_link() {
-    kokoro_ensure_state
-    local uuid path sni pub sid mode host security cdn
-    uuid="$(kokoro_sec '.inbound.uuid')"
-    path="$(kokoro_sec '.inbound.xhttp_path')"
-    mode="$(kokoro_cfg '.inbound.mode')"
-    sni="$(kokoro_cfg '.inbound.reality.server_names[0]')"
-    pub="$(kokoro_sec '.inbound.reality.public_key')"
-    sid="$(kokoro_sec '.inbound.reality.short_ids[0]')"
-    cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
-
-    if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
-        host="${cdn}"
-        security="tls"
-        echo "vless://${uuid}@${host}:443?encryption=none&security=${security}&type=xhttp&path=${path}&host=${host}#kokoro-tls"
-    fi
-
-    if [[ "$mode" == "reality" || "$mode" == "both" ]]; then
-        host="$(curl -4 -s ifconfig.me 2>/dev/null || echo 'YOUR_VPS_IP')"
-        security="reality"
-        echo "vless://${uuid}@${host}:443?encryption=none&security=${security}&type=xhttp&path=${path}&pbk=${pub}&fp=chrome&sni=${sni}&sid=${sid}#kokoro-reality"
-    fi
-}
-
-kokoro_share_link
+source "${KOKORO_ROOT}/lib/link.sh"
+kokoro_link_show "$@"

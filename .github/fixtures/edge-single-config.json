@@ -3,15 +3,15 @@
   "language": "en",
   "role": "edge",
   "inbound": {
-    "mode": "both",
+    "mode": "reality",
     "reality": {
       "dest": "www.cloudflare.com:443",
       "server_names": ["www.cloudflare.com"]
     },
     "tls": {
       "domain": "",
-      "cdn_domain": "cdn.example.com",
-      "acme_email": "admin@example.com"
+      "cdn_domain": "",
+      "acme_email": ""
     }
   },
   "caddy": {
@@ -19,10 +19,10 @@
     "use_l4": true
   },
   "multinode": {
-    "enabled": true,
-    "exit_ip": "203.0.113.2",
+    "enabled": false,
+    "exit_ip": "",
     "exit_port": 51820,
-    "peer_exit_pubkey": "yAnzG8wXnOp5lN8vK2mR3sT4uV5wX6yZ7aB8cD9eF0=",
+    "peer_exit_pubkey": "",
     "peer_edge_pubkey": "",
     "local_wg_ip": "10.66.0.2",
     "peer_wg_ip": "10.66.0.1",

@@ -32,8 +32,11 @@
     "enabled": false,
     "socks_port": 9050
   },
-  "routing": {
-    "preset": "ai-to-exit"
+  "routing": {},
+  "firewall": {
+    "enabled": true,
+    "ssh_port": 0,
+    "extra_allow": []
   },
   "paths": {
     "xray_config": "/usr/local/etc/xray/config.json",

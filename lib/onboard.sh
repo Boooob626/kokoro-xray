@@ -5,7 +5,7 @@
 source "${KOKORO_ROOT}/lib/common.sh"
 
 kokoro_onboard_edge() {
-    local mode cdn email sni dest preset
+    local mode cdn email sni dest
 
     if [[ ! -t 0 ]]; then
         return 0
@@ -24,15 +24,27 @@ kokoro_onboard_edge() {
     fi
 
     if [[ "$mode" == "reality" || "$mode" == "both" ]]; then
-        read -r -p "Scan for REALITY target? [Y/n]: " do_scan
-        if [[ ! "$do_scan" =~ ^[Nn]$ ]]; then
+        local do_scan=false scan_args=()
+        if [[ "${KOKORO_APPLY_EDGE:-}" == "true" ]]; then
+            do_scan=true
+            kokoro_log "scanning REALITY targets (--apply-edge)..."
+        else
+            read -r -p "Scan for REALITY target? [Y/n]: " scan_ans
+            [[ ! "$scan_ans" =~ ^[Nn]$ ]] && do_scan=true
+        fi
+
+        if [[ "$do_scan" == "true" ]]; then
             # shellcheck source=lib/reality-scan.sh
             source "${KOKORO_ROOT}/lib/reality-scan.sh"
-            if kokoro_reality_scan --limit 5 --apply; then
+            if [[ -t 0 ]]; then
+                scan_args=(--limit 10 --select)
+            else
+                scan_args=(--limit 10 --apply)
+            fi
+            if kokoro_reality_scan "${scan_args[@]}"; then
                 kokoro_log "REALITY target set from scan"
             else
                 kokoro_warn "scan found no valid targets — enter manually"
-                local sni dest
                 read -r -p "REALITY SNI [www.sky.com]: " sni
                 sni="${sni:-www.sky.com}"
                 kokoro_cfg_set '.inbound.reality.server_names' "[\"${sni}\"]"
@@ -41,7 +53,6 @@ kokoro_onboard_edge() {
                 kokoro_cfg_set_str '.inbound.reality.dest' "$dest"
             fi
         else
-            local sni dest
             read -r -p "REALITY SNI [www.sky.com]: " sni
             sni="${sni:-www.sky.com}"
             kokoro_cfg_set '.inbound.reality.server_names' "[\"${sni}\"]"
@@ -51,7 +62,38 @@ kokoro_onboard_edge() {
         fi
     fi
 
-    read -r -p "Routing preset [ai-to-exit/all-to-exit] (ai-to-exit): " preset
-    preset="${preset:-ai-to-exit}"
-    kokoro_cfg_set_str '.routing.preset' "$preset"
+    kokoro_cfg_set '.tor.enabled' 'false'
+    kokoro_onboard_firewall
+}
+
+kokoro_onboard_firewall() {
+    local ans ssh extra detected json_arr
+    if [[ ! -t 0 ]]; then
+        return 0
+    fi
+
+    read -r -p "Enable UFW firewall? [Y/n]: " ans
+    if [[ "$ans" =~ ^[Nn]$ ]]; then
+        kokoro_cfg_set '.firewall.enabled' 'false'
+        return 0
+    fi
+    kokoro_cfg_set '.firewall.enabled' 'true'
+
+    detected="$(bash -c "source '${KOKORO_ROOT}/lib/firewall.sh'; kokoro_firewall_detect_ssh")"
+    read -r -p "SSH port [auto/${detected}]: " ssh
+    if [[ -n "$ssh" ]]; then
+        kokoro_cfg_set '.firewall.ssh_port' "$ssh"
+    else
+        kokoro_cfg_set '.firewall.ssh_port' '0'
+    fi
+
+    read -r -p "Extra allow ports (e.g. 5555,5000-5010): " extra
+    if [[ -z "$extra" ]]; then
+        kokoro_cfg_set '.firewall.extra_allow' '[]'
+        return 0
+    fi
+
+    json_arr="$(printf '%s' "$extra" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+        | awk 'NF {printf "%s\"%s\"", (n++?",":""), $0}')"
+    kokoro_cfg_set '.firewall.extra_allow' "[${json_arr}]"
 }

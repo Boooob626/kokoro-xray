@@ -12,9 +12,20 @@ jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile sec "${FIX}/edge-secrets.json" \
     >"${OUT}/edge-xray.json"
 jq -e '.inbounds | length == 2' "${OUT}/edge-xray.json" >/dev/null
-jq -e '.outbounds | map(.tag) | index("TOR")' "${OUT}/edge-xray.json" >/dev/null
+jq -e '(.outbounds | map(.tag) | index("TOR")) | not' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.outbounds | map(.tag) | index("WG_TO_EXIT")' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.routing.rules[-1].outboundTag == "WG_TO_EXIT"' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .listen == "127.0.0.1"' "${OUT}/edge-xray.json" >/dev/null
+
+echo "== edge single-node xray =="
+jq -n -f "${ROOT}/lib/render.jq" \
+    --slurpfile cfg "${FIX}/edge-single-config.json" \
+    --slurpfile sec "${FIX}/edge-secrets.json" \
+    >"${OUT}/edge-single-xray.json"
+jq -e '(.outbounds | map(.tag) | index("WG_TO_EXIT")) | not' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules[0].domain[0] == "geosite:google"' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules | map(select(.domain[]? == "geosite:ru")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/edge-single-xray.json" >/dev/null
 
 echo "== edge caddy =="
 jq -n -r -f "${ROOT}/lib/caddy.jq" \
@@ -30,6 +41,9 @@ jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile sec "${FIX}/exit-secrets.json" \
     >"${OUT}/exit-xray.json"
 jq -e '.inbounds[0].protocol == "wireguard"' "${OUT}/exit-xray.json" >/dev/null
+jq -e '.outbounds | map(.tag) | index("TOR")' "${OUT}/exit-xray.json" >/dev/null
+jq -e '.routing.rules[0].outboundTag == "TOR"' "${OUT}/exit-xray.json" >/dev/null
+jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/exit-xray.json" >/dev/null
 
 if command -v xray >/dev/null 2>&1; then
     echo "== xray -test =="

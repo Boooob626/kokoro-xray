@@ -16,7 +16,7 @@ kokoro_reload() {
         systemctl restart caddy
     fi
 
-    if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
+    if [[ "$role" == "exit" && "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
         systemctl enable tor >/dev/null 2>&1 || true
         systemctl restart tor
     fi

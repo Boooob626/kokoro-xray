@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
 # kokoro-xray — config schema migration
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 kokoro_migrate() {
-    local ver
+    local ver tmp
     ver="$(kokoro_cfg '.version // "0.1.0"')"
-    [[ "$ver" == "0.2.0" ]] && return 0
 
     if [[ "$ver" == "0.1.0" ]]; then
         kokoro_migrate_v010_to_v020
         kokoro_cfg_set_str '.version' '0.2.0'
         kokoro_log "migrated config 0.1.0 → 0.2.0"
+    fi
+
+    if ! jq -e '.firewall' "${KOKORO_CONFIG}" >/dev/null 2>&1; then
+        tmp="$(mktemp)"
+        jq '.firewall = {"enabled": true, "ssh_port": 0, "extra_allow": []}' \
+            "${KOKORO_CONFIG}" >"$tmp"
+        mv "$tmp" "${KOKORO_CONFIG}"
     fi
 }
 

@@ -42,7 +42,7 @@ kokoro_preflight_port() {
 }
 
 kokoro_preflight_edge() {
-    local mode="$1" cdn
+    local mode="$1" cdn xhttp_socket socket_path fallback_type fallback_root fallback_proxy
     case "$mode" in
         reality|tls|both) ;;
         *) kokoro_die "invalid inbound.mode: $mode" ;;
@@ -59,6 +59,26 @@ kokoro_preflight_edge() {
     if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
         cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
         [[ -n "$cdn" && "$cdn" != "null" ]] || kokoro_die "inbound.tls.cdn_domain required for tls/both mode"
+
+        xhttp_socket="$(kokoro_cfg '.inbound.xhttp.socket // true')"
+        socket_path="$(kokoro_cfg '.inbound.xhttp.socket_path // ""')"
+        if [[ "$xhttp_socket" == "true" ]]; then
+            [[ "$socket_path" == /* ]] || kokoro_die "inbound.xhttp.socket_path must be absolute"
+        fi
+
+        fallback_type="$(kokoro_cfg '.fallback.type // "static"')"
+        case "$fallback_type" in
+            static)
+                fallback_root="$(kokoro_cfg '.fallback.root // ""')"
+                [[ "$fallback_root" == /* ]] || kokoro_die "fallback.root must be absolute"
+                ;;
+            proxy)
+                fallback_proxy="$(kokoro_cfg '.fallback.proxy_url // ""')"
+                [[ "$fallback_proxy" =~ ^https?://[^[:space:]]+$ ]] || kokoro_die "fallback.proxy_url must be http(s) URL"
+                ;;
+            none) ;;
+            *) kokoro_die "invalid fallback.type: $fallback_type" ;;
+        esac
     fi
 
     if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then

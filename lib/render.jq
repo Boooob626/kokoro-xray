@@ -16,6 +16,8 @@ def reality_listen: if mode == "reality" then "0.0.0.0" else "127.0.0.1" end;
 def reality_port: if mode == "reality" then 443 else 8443 end;
 def xhttp_sockopt: { trustedXForwardedFor: ["Kokoro-Trusted-XFF"] };
 def xhttp_mode: cfg.inbound.xhttp.mode // "auto";
+def xhttp_socket_enabled: cfg.inbound.xhttp.socket // true;
+def xhttp_socket_listen: "\((cfg.inbound.xhttp.socket_path // "/run/kokoro-xray/xhttp.sock")),0660";
 def xhttp_base: {
   mode: xhttp_mode,
   path: sec.inbound.xhttp_path
@@ -67,10 +69,14 @@ def reality_inbound: {
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
 };
 
-def tls_inbound: {
+def tls_listen: if xhttp_socket_enabled then
+  { listen: xhttp_socket_listen }
+else
+  { listen: "127.0.0.1", port: 8444 }
+end;
+
+def tls_inbound: ({
   tag: "TLS_XHTTP_IN",
-  listen: "127.0.0.1",
-  port: 8444,
   protocol: "vless",
   settings: {
     clients: [{ id: sec.inbound.uuid, flow: "" }],
@@ -83,7 +89,7 @@ def tls_inbound: {
     sockopt: xhttp_sockopt
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
-};
+} + tls_listen);
 
 def base_outbounds: [
   { tag: "DIRECT", protocol: "freedom" },

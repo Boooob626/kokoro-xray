@@ -13,6 +13,7 @@ kokoro_caddy_install() {
 
     if [[ -x "$dest" ]] && "$dest" list-modules 2>/dev/null | grep -q 'layer4'; then
         kokoro_log "caddy with layer4 already installed"
+        kokoro_caddy_prepare_fallback
         kokoro_caddy_install_service
         return
     fi
@@ -33,7 +34,36 @@ kokoro_caddy_install() {
         "$dest" list-modules 2>/dev/null | grep -q 'layer4' || kokoro_die "caddy-l4 module missing after xcaddy build"
     fi
     kokoro_log "caddy installed to ${dest}"
+    kokoro_caddy_prepare_fallback
     kokoro_caddy_install_service
+}
+
+kokoro_caddy_prepare_fallback() {
+    local type root
+    type="$(kokoro_cfg '.fallback.type // "static"')"
+    [[ "$type" == "static" ]] || return 0
+    root="$(kokoro_cfg '.fallback.root')"
+    [[ -n "$root" && "$root" != "null" ]] || kokoro_die "fallback.root is required for static fallback"
+    install -d -m 755 "$root"
+    if ! find "$root" -mindepth 1 -maxdepth 1 | read -r _; then
+        cat >"${root}/index.html" <<'EOF'
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Service</title>
+</head>
+<body>
+  <main>
+    <h1>Service online</h1>
+    <p>This endpoint is operating normally.</p>
+  </main>
+</body>
+</html>
+EOF
+        chmod 644 "${root}/index.html"
+    fi
 }
 
 kokoro_caddy_install_service() {

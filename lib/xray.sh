@@ -50,6 +50,8 @@ After=network.target
 
 [Service]
 Type=simple
+RuntimeDirectory=kokoro-xray
+ExecStartPre=/bin/rm -f /run/kokoro-xray/xhttp.sock
 ExecStart=$(kokoro_cfg '.paths.xray_bin') run -config ${cfg}
 Restart=on-failure
 LimitNOFILE=65535

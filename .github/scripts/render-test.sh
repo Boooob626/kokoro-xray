@@ -24,6 +24,7 @@ jq -n -f "${ROOT}/lib/render.jq" \
     >"${OUT}/edge-single-xray.json"
 jq -e '(.outbounds | map(.tag) | index("WG_TO_EXIT")) | not' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.inbounds[0].streamSettings.xhttpSettings.mode == "auto"' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .listen == "/run/kokoro-xray/xhttp.sock,0660"' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.routing.rules[0].domain[0] == "geosite:google"' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules | map(select(.ip[]? == "geoip:ru")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/edge-single-xray.json" >/dev/null
@@ -47,6 +48,8 @@ jq -n -r -f "${ROOT}/lib/caddy.jq" \
 grep -q 'layer4' "${OUT}/Caddyfile"
 grep -q 'listener_wrappers' "${OUT}/Caddyfile"
 grep -q 'proxy tcp/127.0.0.1:8443' "${OUT}/Caddyfile"
+grep -Fq 'reverse_proxy unix///run/kokoro-xray/xhttp.sock' "${OUT}/Caddyfile"
+grep -q 'file_server' "${OUT}/Caddyfile"
 
 echo "== exit xray =="
 jq -n -f "${ROOT}/lib/render.jq" \

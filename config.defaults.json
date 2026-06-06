@@ -16,8 +16,15 @@
     "xhttp": {
       "mode": "auto",
       "obfs": false,
-      "xmux": false
+      "xmux": false,
+      "socket": true,
+      "socket_path": "/run/kokoro-xray/xhttp.sock"
     }
+  },
+  "fallback": {
+    "type": "static",
+    "root": "/var/www/kokoro-fallback",
+    "proxy_url": ""
   },
   "caddy": {
     "version": "2.9.1",

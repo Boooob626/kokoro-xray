@@ -30,9 +30,14 @@ kokoro_gen_reality_keys() {
     xray_bin="$(kokoro_cfg '.paths.xray_bin')"
     [[ -x "$xray_bin" ]] || kokoro_die "xray not installed"
     out="$("$xray_bin" x25519)"
-    priv="$(printf '%s\n' "$out" | awk '/PrivateKey:|Private key:/{print $NF; exit}')"
-    pub="$(printf '%s\n' "$out" | awk '/Password:|Public key:/{print $NF; exit}')"
-    [[ -n "$priv" && -n "$pub" ]] || kokoro_die "failed to parse xray x25519 output"
+    priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /private.*key|privatekey/ {print $2; exit}')"
+    pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /public.*key|publickey|password/ {print $2; exit}')"
+    priv="${priv%%[[:space:]]*}"
+    pub="${pub%%[[:space:]]*}"
+    if [[ -z "$priv" || -z "$pub" ]]; then
+        printf '%s\n' "$out" >&2
+        kokoro_die "failed to parse xray x25519 output"
+    fi
     kokoro_sec_set_str '.inbound.reality.private_key' "$priv"
     kokoro_sec_set_str '.inbound.reality.public_key' "$pub"
 }

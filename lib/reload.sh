@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — restart services based on role/mode
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 kokoro_reload() {
     kokoro_need_root

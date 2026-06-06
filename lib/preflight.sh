@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — validate intent before render
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 source "${KOKORO_ROOT}/lib/firewall.sh"
 
 kokoro_preflight() {

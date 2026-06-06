@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — OS detection and package helpers
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 kokoro_detect_os() {
     if [[ -f /etc/os-release ]]; then

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — last-good config snapshots
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 kokoro_snapshot_save() {
     local xray_cfg caddyfile

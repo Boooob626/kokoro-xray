@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — Caddy with caddy-l4 via xcaddy
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 source "${KOKORO_ROOT}/lib/os.sh"
 
 kokoro_caddy_install() {

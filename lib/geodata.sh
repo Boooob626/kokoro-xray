@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — geodata install and update
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 KOKORO_XRAY_VERSION="${KOKORO_XRAY_VERSION:-v26.6.1}"
 

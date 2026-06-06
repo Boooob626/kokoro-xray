@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — render dispatcher (jq only, no sed)
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 kokoro_render_xray() {
     local out

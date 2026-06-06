@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # kokoro-xray — config validation
 
-source "$(cd -P -- "$(dirname -- "$0")" && pwd -P)/common.sh"
+source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
 kokoro_validate_geo() {
     local geo_dir

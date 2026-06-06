@@ -71,7 +71,9 @@ kokoro_edge_install() {
 
     kokoro_apply
     kokoro_network_tune || true
-    kokoro_log "edge pubkey (paste on exit): $(kokoro_sec '.multinode.edge_wg_pubkey')"
+    if [[ "$(kokoro_cfg '.multinode.enabled')" == "true" ]]; then
+        kokoro_log "edge pubkey (paste on exit): $(kokoro_sec '.multinode.edge_wg_pubkey')"
+    fi
 }
 
 kokoro_edge_install

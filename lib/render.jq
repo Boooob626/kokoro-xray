@@ -14,6 +14,7 @@ def policy_block: {
 
 def reality_listen: if mode == "reality" then "0.0.0.0" else "127.0.0.1" end;
 def reality_port: if mode == "reality" then 443 else 8443 end;
+def xhttp_sockopt: { trustedXForwardedFor: ["Kokoro-Trusted-XFF"] };
 
 def reality_inbound: {
   tag: "REALITY_XHTTP_IN",
@@ -36,7 +37,7 @@ def reality_inbound: {
       shortIds: sec.inbound.reality.short_ids
     },
     xhttpSettings: { path: sec.inbound.xhttp_path },
-    sockopt: { trustedXForwardedFor: [] }
+    sockopt: xhttp_sockopt
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
 };
@@ -54,7 +55,7 @@ def tls_inbound: {
     network: "xhttp",
     security: "none",
     xhttpSettings: { path: sec.inbound.xhttp_path },
-    sockopt: { trustedXForwardedFor: ["127.0.0.1"] }
+    sockopt: xhttp_sockopt
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
 };

@@ -9,6 +9,7 @@ Minimal pure-shell Xray manager. Shell dispatches, jq renders.
 - Multi-hop: edge routes traffic to exit via WG tunnel
 - Tor: `.onion` outbound via local Tor SOCKS
 - Caddy: xcaddy + caddy-l4 for REALITY/TLS SNI split on `:443`
+- Reproducible downloads: pinned Caddy builds and Xray checksum verification
 
 ## Quick start
 

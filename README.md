@@ -5,7 +5,7 @@ Minimal pure-shell Xray manager. Shell dispatches, jq renders.
 ## Features
 
 - Edge: VLESS + XHTTP + REALITY and/or TLS (Cloudflare CDN)
-- Exit: Xray-core WireGuard inbound (FinalMask optional)
+- Exit: Xray-core WireGuard inbound
 - Multi-hop: edge routes traffic to exit via WG tunnel
 - Tor: `.onion` outbound via local Tor SOCKS
 - Caddy: xcaddy + caddy-l4 for REALITY/TLS SNI split on `:443`

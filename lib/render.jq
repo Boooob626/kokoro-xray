@@ -82,9 +82,7 @@ def wg_outbound: if cfg.multinode.enabled then
         allowedIPs: ["0.0.0.0/0", "::/0"]
       }]
     }
-  } + if cfg.multinode.finalmask then
-    { streamSettings: { finalmask: { udp: [{ type: "header-wireguard" }] } } }
-  else {} end]
+  }]
 else [] end;
 
 # Single-node: allow Google (incl. .cn) before CN/RU blocks
@@ -145,9 +143,7 @@ def exit_inbound: {
       allowedIPs: ["\((cfg.multinode.peer_wg_ip))/32"]
     }]
   }
-} + if cfg.multinode.finalmask then
-  { streamSettings: { finalmask: { udp: [{ type: "header-wireguard" }] } } }
-else {} end;
+};
 
 def exit_config: log_block + {
   inbounds: [exit_inbound],

@@ -13,8 +13,8 @@ kokoro_link_tls_url() {
     path="$(kokoro_sec '.inbound.xhttp_path')"
     cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
     [[ -n "$cdn" && "$cdn" != "null" ]] || return 0
-    printf 'vless://%s@%s:443?encryption=none&security=tls&type=xhttp&path=%s&host=%s#kokoro-tls\n' \
-        "$uuid" "$cdn" "$path" "$cdn"
+    printf 'vless://%s@%s:443?encryption=none&security=tls&type=xhttp&path=%s&host=%s&sni=%s&fp=chrome&alpn=h2#kokoro-tls\n' \
+        "$uuid" "$cdn" "$path" "$cdn" "$cdn"
 }
 
 kokoro_link_reality_url() {

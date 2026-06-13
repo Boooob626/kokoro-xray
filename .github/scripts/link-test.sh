@@ -23,6 +23,10 @@ tls="$(kokoro_link_tls_url | tr -d '\n')"
 [[ "$tls" == vless://* ]]
 [[ "$tls" == *"security=tls"* ]]
 [[ "$tls" == *"cdn.example.com"* ]]
+[[ "$tls" == *"host=cdn.example.com"* ]]
+[[ "$tls" == *"sni=cdn.example.com"* ]]
+[[ "$tls" == *"fp=chrome"* ]]
+[[ "$tls" == *"alpn=h2"* ]]
 SCRIPT
 
 rm -rf "$tmp_home"

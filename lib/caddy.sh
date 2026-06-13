@@ -35,6 +35,29 @@ kokoro_caddy_installed_matches() {
     return 0
 }
 
+kokoro_run_with_timer() {
+    local label="$1" interval="${KOKORO_BUILD_TIMER_INTERVAL:-30}" pid elapsed status
+    shift
+
+    "$@" &
+    pid="$!"
+    elapsed=0
+
+    while kill -0 "$pid" 2>/dev/null; do
+        sleep "$interval"
+        if kill -0 "$pid" 2>/dev/null; then
+            elapsed=$((elapsed + interval))
+            kokoro_log "${label} still running... ${elapsed}s"
+        fi
+    done
+
+    if wait "$pid"; then
+        return 0
+    fi
+    status=$?
+    return "$status"
+}
+
 kokoro_caddy_install() {
     local dest caddy_version
     kokoro_need_root
@@ -51,9 +74,13 @@ kokoro_caddy_install() {
     GOBIN=/usr/local/bin go install "github.com/caddyserver/xcaddy/cmd/xcaddy@${KOKORO_XCADDY_VERSION}"
 
     if kokoro_caddy_needs_l4; then
-        xcaddy build "$caddy_version" --with "github.com/mholt/caddy-l4@${KOKORO_CADDY_L4_VERSION}" --output "$dest"
+        kokoro_log "building Caddy ${caddy_version} with caddy-l4 ${KOKORO_CADDY_L4_VERSION}"
+        kokoro_log "this can take several minutes on small VPS instances"
+        kokoro_run_with_timer "caddy build" xcaddy build "$caddy_version" --with "github.com/mholt/caddy-l4@${KOKORO_CADDY_L4_VERSION}" --output "$dest"
     else
-        xcaddy build "$caddy_version" --output "$dest"
+        kokoro_log "building Caddy ${caddy_version}"
+        kokoro_log "this can take several minutes on small VPS instances"
+        kokoro_run_with_timer "caddy build" xcaddy build "$caddy_version" --output "$dest"
     fi
 
     chmod 755 "$dest"

@@ -10,7 +10,7 @@ Minimal pure-shell Xray manager. Shell dispatches, jq renders.
 - Tor: `.onion` outbound via local Tor SOCKS
 - Caddy: xcaddy + caddy-l4 for REALITY/TLS SNI split on `:443`
 - Reproducible downloads: pinned Caddy builds and Xray checksum verification
-- TLS XHTTP profile includes packet-up, XMUX, and lightweight XHTTP padding obfs
+- TLS XHTTP profile includes auto mode, XMUX, and lightweight XHTTP padding obfs
 
 ## Quick start
 

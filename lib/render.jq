@@ -17,7 +17,7 @@ def reality_port: if mode == "reality" then 443 else 8443 end;
 def xhttp_sockopt: { trustedXForwardedFor: ["Kokoro-Trusted-XFF"] };
 def xhttp_base_settings: { path: sec.inbound.xhttp_path };
 def xhttp_tls_settings: xhttp_base_settings + {
-  mode: "packet-up",
+  mode: "auto",
   xmux: {
     maxConcurrency: "1-1",
     hMaxRequestTimes: "600-900",

@@ -16,6 +16,11 @@ jq -e '(.outbounds | map(.tag) | index("TOR")) | not' "${OUT}/edge-xray.json" >/
 jq -e '.outbounds | map(.tag) | index("WG_TO_EXIT")' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "WG_TO_EXIT"' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .listen == "127.0.0.1"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .streamSettings.xhttpSettings.mode == null' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.mode == "packet-up"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xPaddingObfsMode == true' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xPaddingKey == "v"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xmux.maxConcurrency == "1-1"' "${OUT}/edge-xray.json" >/dev/null
 
 echo "== edge single-node xray =="
 jq -n -f "${ROOT}/lib/render.jq" \

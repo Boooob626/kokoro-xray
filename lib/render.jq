@@ -15,6 +15,25 @@ def policy_block: {
 def reality_listen: if mode == "reality" then "0.0.0.0" else "127.0.0.1" end;
 def reality_port: if mode == "reality" then 443 else 8443 end;
 def xhttp_sockopt: { trustedXForwardedFor: ["Kokoro-Trusted-XFF"] };
+def xhttp_base_settings: { path: sec.inbound.xhttp_path };
+def xhttp_tls_settings: xhttp_base_settings + {
+  mode: "packet-up",
+  xmux: {
+    maxConcurrency: "1-1",
+    hMaxRequestTimes: "600-900",
+    hMaxReusableSecs: "1800-3000"
+  },
+  xPaddingKey: "v",
+  xPaddingBytes: "16-96",
+  xPaddingHeader: "Referer",
+  xPaddingMethod: "tokenish",
+  uplinkHTTPMethod: "POST",
+  xPaddingObfsMode: true,
+  xPaddingPlacement: "queryInHeader",
+  scMaxEachPostBytes: 2000000,
+  uplinkDataPlacement: "body",
+  scMinPostsIntervalMs: 10
+};
 
 def reality_inbound: {
   tag: "REALITY_XHTTP_IN",
@@ -36,7 +55,7 @@ def reality_inbound: {
       privateKey: sec.inbound.reality.private_key,
       shortIds: sec.inbound.reality.short_ids
     },
-    xhttpSettings: { path: sec.inbound.xhttp_path },
+    xhttpSettings: xhttp_base_settings,
     sockopt: xhttp_sockopt
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
@@ -54,7 +73,7 @@ def tls_inbound: {
   streamSettings: {
     network: "xhttp",
     security: "none",
-    xhttpSettings: { path: sec.inbound.xhttp_path },
+    xhttpSettings: xhttp_tls_settings,
     sockopt: xhttp_sockopt
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }

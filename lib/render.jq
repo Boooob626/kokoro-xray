@@ -106,14 +106,38 @@ else [] end;
 
 # Single-node: allow Google (incl. .cn) before CN/RU blocks
 def google_direct_rules: [
-  { type: "field", domain: ["geosite:google"], outboundTag: "DIRECT" }
+  {
+    type: "field",
+    domain: [
+      "geosite:google",
+      "geosite:youtube",
+      "domain:gmail.com",
+      "domain:gemini.google.com",
+      "domain:gemini.google",
+      "domain:googleapis.cn",
+      "domain:googleapis-cn.com",
+      "domain:gstatic.cn",
+      "domain:gstatic-cn.com"
+    ],
+    outboundTag: "DIRECT"
+  }
 ];
 
 def single_node_block_rules: [
   { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
   { type: "field", domain: ["geosite:private"], outboundTag: "BLOCK" },
   { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
-  { type: "field", domain: ["geosite:cn"], outboundTag: "BLOCK" },
+  {
+    type: "field",
+    domain: [
+      "geosite:cn",
+      "geosite:geolocation-cn",
+      "regexp:.*\\.ru$",
+      "regexp:.*\\.su$",
+      "regexp:.*\\.xn--p1ai$"
+    ],
+    outboundTag: "BLOCK"
+  },
   { type: "field", ip: ["geoip:cn"], outboundTag: "BLOCK" },
   { type: "field", ip: ["geoip:ru"], outboundTag: "BLOCK" }
 ];

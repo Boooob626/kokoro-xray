@@ -114,7 +114,68 @@ kokoro_link_tls_json() {
             },
             { tag: "DIRECT", protocol: "freedom" },
             { tag: "BLOCK", protocol: "blackhole" }
-          ]
+          ],
+          routing: {
+            domainStrategy: "IPIfNonMatch",
+            rules: [
+              {
+                type: "field",
+                domain: [
+                  "geosite:google",
+                  "geosite:youtube",
+                  "domain:gmail.com",
+                  "domain:gemini.google.com",
+                  "domain:gemini.google",
+                  "domain:googleapis.cn",
+                  "domain:googleapis-cn.com",
+                  "domain:gstatic.cn",
+                  "domain:gstatic-cn.com"
+                ],
+                outboundTag: "kokoro-tls"
+              },
+              {
+                type: "field",
+                ip: ["geoip:private"],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                domain: ["geosite:private"],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                protocol: ["bittorrent"],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                domain: [
+                  "geosite:cn",
+                  "geosite:geolocation-cn",
+                  "regexp:.*\\.ru$",
+                  "regexp:.*\\.su$",
+                  "regexp:.*\\.xn--p1ai$"
+                ],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                ip: ["geoip:cn"],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                ip: ["geoip:ru"],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                network: "tcp,udp",
+                outboundTag: "kokoro-tls"
+              }
+            ]
+          }
         }'
 }
 

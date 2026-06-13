@@ -18,6 +18,9 @@ Minimal pure-shell Xray manager. Shell dispatches, jq renders.
 # Install
 curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo bash
 
+# Clean reinstall from this test branch, preserving ~/.kokoro-xray state
+curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/test/reproducible-downloads/install.sh | sudo bash -s -- --clean-install --branch test/reproducible-downloads
+
 # Exit node (NL) first
 sudo kokoro-xray exit
 

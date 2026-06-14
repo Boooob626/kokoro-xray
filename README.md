@@ -9,12 +9,17 @@ Minimal pure-shell Xray manager. Shell dispatches, jq renders.
 - Multi-hop: edge routes traffic to exit via WG tunnel
 - Tor: `.onion` outbound via local Tor SOCKS
 - Caddy: xcaddy + caddy-l4 for REALITY/TLS SNI split on `:443`
+- Reproducible downloads: pinned Caddy builds and Xray checksum verification
+- TLS XHTTP profile includes auto mode, XMUX, and lightweight XHTTP padding obfs
 
 ## Quick start
 
 ```bash
 # Install
 curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo bash
+
+# Clean reinstall from this test branch, preserving ~/.kokoro-xray state
+curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/test/reproducible-downloads/install.sh | sudo bash -s -- --clean-install --branch test/reproducible-downloads
 
 # Exit node (NL) first
 sudo kokoro-xray exit

@@ -16,6 +16,11 @@ jq -e '(.outbounds | map(.tag) | index("TOR")) | not' "${OUT}/edge-xray.json" >/
 jq -e '.outbounds | map(.tag) | index("WG_TO_EXIT")' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "WG_TO_EXIT"' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .listen == "127.0.0.1"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .streamSettings.xhttpSettings.mode == null' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.mode == "auto"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xPaddingObfsMode == true' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xPaddingKey == "v"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xmux.maxConcurrency == "1-1"' "${OUT}/edge-xray.json" >/dev/null
 
 echo "== edge single-node xray =="
 jq -n -f "${ROOT}/lib/render.jq" \
@@ -24,6 +29,10 @@ jq -n -f "${ROOT}/lib/render.jq" \
     >"${OUT}/edge-single-xray.json"
 jq -e '(.outbounds | map(.tag) | index("WG_TO_EXIT")) | not' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[0].domain[0] == "geosite:google"' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules[0].domain | index("domain:googleapis.cn")' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules[0].domain | index("domain:gstatic.cn")' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules | map(select(.domain[]? == "regexp:.*\\.ru$")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
+jq -e '.routing.rules | map(select(.domain[]? == "regexp:.*\\.su$")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules | map(select(.ip[]? == "geoip:ru")) | length > 0' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/edge-single-xray.json" >/dev/null
 

@@ -25,6 +25,12 @@ kokoro_health() {
         if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
             echo "caddy:    $(systemctl is-active caddy 2>/dev/null || echo unknown)"
         fi
+        if [[ "$mode" == "tls" ]]; then
+            echo
+            echo -e "${YELLOW}${BOLD}TLS mode client note${NC}"
+            echo -e "${RED}Please use HApp or another client that supports JSON copy-paste input.${NC}"
+            echo "Generate the full client JSON with: kokoro-xray link --json tls"
+        fi
         if [[ "$(kokoro_cfg '.multinode.enabled')" == "true" ]]; then
             local ip port
             ip="$(kokoro_cfg '.multinode.exit_ip')"

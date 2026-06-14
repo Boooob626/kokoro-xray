@@ -23,6 +23,34 @@ tls="$(kokoro_link_tls_url | tr -d '\n')"
 [[ "$tls" == vless://* ]]
 [[ "$tls" == *"security=tls"* ]]
 [[ "$tls" == *"cdn.example.com"* ]]
+[[ "$tls" == *"host=cdn.example.com"* ]]
+[[ "$tls" == *"sni=cdn.example.com"* ]]
+[[ "$tls" == *"fp=chrome"* ]]
+[[ "$tls" == *"alpn=h2"* ]]
+
+tls_json="$(kokoro_link_tls_json)"
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].tag == "kokoro-tls"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.security == "tls"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.tlsSettings.serverName == "cdn.example.com"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.tlsSettings.fingerprint == "chrome"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.tlsSettings.alpn[0] == "h2"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.xhttpSettings.mode == "auto"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.xhttpSettings.xPaddingObfsMode == true' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.xhttpSettings.xmux.maxConcurrency == "1-1"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].outboundTag == "kokoro-tls"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].domain | index("domain:googleapis.cn")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].domain | index("domain:gstatic.cn")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.domain[]? == "regexp:.*\\.ru$")) | length > 0' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.ip[]? == "geoip:cn")) | length > 0' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[-1].outboundTag == "kokoro-tls"' >/dev/null
+
+cli_tls_json="$(kokoro_link_show --json tls)"
+printf '%s\n' "$cli_tls_json" | jq -e '.outbounds[0].tag == "kokoro-tls"' >/dev/null
+
+if command -v xray >/dev/null 2>&1; then
+    printf '%s\n' "$cli_tls_json" >"${HOME}/.kokoro-xray/client-tls.json"
+    xray run -test -config "${HOME}/.kokoro-xray/client-tls.json"
+fi
 SCRIPT
 
 rm -rf "$tmp_home"

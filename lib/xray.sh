@@ -17,19 +17,11 @@ kokoro_xray_load_paths() {
 }
 
 kokoro_xray_install() {
-    local arch zip url dest geo_dir xray_config tmp
+    local zip dest geo_dir xray_config tmp
     kokoro_need_root
     kokoro_xray_load_paths
-    arch="$(uname -m)"
-    case "$arch" in
-        x86_64) arch="64" ;;
-        aarch64) arch="arm64-v8a" ;;
-        *) kokoro_die "unsupported arch: $arch" ;;
-    esac
-    zip="Xray-linux-${arch}.zip"
-    url="https://github.com/XTLS/Xray-core/releases/download/${KOKORO_XRAY_VERSION}/${zip}"
     tmp="$(mktemp -d)"
-    curl -fsSL "$url" -o "${tmp}/${zip}"
+    zip="$(kokoro_xray_download_release_zip "$tmp")"
     unzip -qo "${tmp}/${zip}" -d "$tmp"
     install -m 755 "${tmp}/xray" "$dest"
     install -d "$geo_dir"

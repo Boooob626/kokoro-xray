@@ -1,84 +1,145 @@
 # kokoro-xray
 
-Minimal pure-shell Xray manager. Shell dispatches, jq renders.
+Small shell manager for Xray edge/exit deployments.
 
-## Features
+The scripts keep state in JSON, render configs with `jq`, validate before reload, and avoid large framework dependencies.
 
-- Edge: VLESS + XHTTP + REALITY and/or TLS (Cloudflare CDN)
-- Exit: Xray-core WireGuard inbound
-- Multi-hop: edge routes traffic to exit via WG tunnel
-- Tor: `.onion` outbound via local Tor SOCKS
-- Caddy: xcaddy + caddy-l4 for REALITY/TLS SNI split on `:443`
-- Reproducible downloads: pinned Caddy builds and Xray checksum verification
-- TLS XHTTP profile includes auto mode, XMUX, and lightweight XHTTP padding obfs
+## Supported Modes
 
-## Quick start
+- Edge single-node: VLESS XHTTP REALITY, TLS, or both
+- Edge + exit: edge forwards traffic to an exit over WireGuard
+- TLS edge: Caddy handles ACME and HTTPS routing
+- REALITY edge: Xray serves public `:443` directly
+
+## Requirements
+
+- Debian or Ubuntu
+- Root access
+- `443/tcp` open on edge nodes
+- `80/tcp` open on TLS edge nodes for ACME
+- Exit node UDP port open when using edge + exit, default `51820/udp`
+
+## Install
 
 ```bash
-# Install
 curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo bash
+```
 
-# Clean reinstall from this test branch, preserving ~/.kokoro-xray state
-curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/test/reproducible-downloads/install.sh | sudo bash -s -- --clean-install --branch test/reproducible-downloads
+Install and immediately start edge setup:
 
-# Exit node (NL) first
-sudo kokoro-xray exit
+```bash
+curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo bash -s -- --edge
+```
 
-# Edge node (DE)
+Install and immediately start exit setup:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo bash -s -- --exit
+```
+
+## Update
+
+Normal update keeps existing state:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo bash
+sudo kokoro-xray apply
+```
+
+Clean reinstall removes `/opt/kokoro-xray` and keeps `~/.kokoro-xray`:
+
+```bash
+sudo kokoro-xray reinstall --branch main
+sudo kokoro-xray apply
+```
+
+## Basic Flow
+
+Single edge:
+
+```bash
 sudo kokoro-xray edge
-
-# Pair / apply / links
-sudo kokoro-xray pair
 sudo kokoro-xray apply
 kokoro-xray link
 kokoro-xray status
 ```
 
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `edge [--keep-secrets]` | Install/update edge |
-| `exit [--keep-secrets]` | Install/update exit |
-| `apply` | Render → validate → reload |
-| `pair` | Exchange WG peer keys |
-| `link` | Share URLs |
-| `status` | Service + peer health |
-| `tor on\|off` | Toggle Tor routing + apply |
-| `geodata` | Update geoip/geosite |
-| `reality scan` | Probe hosts for TLS1.3+h2+SAN (no Apple/iCloud) |
-| `reality scan --apply` | Pick best target and write config.json |
-
-## REALITY target scan
-
-Validates candidates against [REALITY requirements](https://github.com/XTLS/REALITY/blob/main/README.en.md) — **not** a bulk third-party import:
+Edge + exit:
 
 ```bash
-# Scan curated seeds from data/reality-seeds.txt
-kokoro-xray reality scan
+# On exit
+sudo kokoro-xray exit
 
-# Probe your own list + apply best to config
-kokoro-xray reality scan --domains www.sky.com,github.com --apply
+# On edge
+sudo kokoro-xray edge
+sudo kokoro-xray pair
+sudo kokoro-xray apply
+
+# Back on exit, paste edge peer info when prompted
+sudo kokoro-xray pair
 sudo kokoro-xray apply
 ```
 
-Checks: DNS, TLS 1.3, ALPN `h2`, cert SAN, redirect rules. Rejects `apple`/`icloud` (per Xray-core).
+## Client Output
 
-## Config
+Standard share links:
 
+```bash
+kokoro-xray link
+```
+
+TLS XHTTP JSON export for clients that support full JSON import:
+
+```bash
+kokoro-xray link --json tls
+```
+
+Use JSON export for TLS mode when the client app does not preserve advanced XHTTP settings from URL subscriptions.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `edge [--keep-secrets]` | Install or update edge node |
+| `exit [--keep-secrets]` | Install or update exit node |
+| `apply` | Render, validate, and reload services |
+| `pair` | Exchange edge/exit WireGuard peer info |
+| `link [--json tls]` | Print client links or TLS JSON |
+| `status` | Show service and config status |
+| `validate` | Validate rendered configs |
+| `geodata` | Update geo data files |
+| `firewall status` | Show UFW state |
+| `firewall apply` | Re-apply configured UFW rules |
+| `tune` | Apply optional network tuning |
+| `reality scan` | Probe REALITY targets |
+| `tor on\|off` | Optional exit-node Tor routing |
+| `reinstall --branch main` | Clean reinstall code, keep state |
+
+## REALITY Target Scan
+
+```bash
+kokoro-xray reality scan
+kokoro-xray reality scan --domains www.sky.com,github.com
+kokoro-xray reality scan --apply
+sudo kokoro-xray apply
+```
+
+The scanner checks DNS, TLS 1.3, ALPN `h2`, certificate coverage, and redirect behavior.
+
+## Files
+
+- Install dir: `/opt/kokoro-xray`
+- Command symlink: `/usr/local/bin/kokoro-xray`
 - Settings: `~/.kokoro-xray/config.json`
-- Secrets: `~/.kokoro-xray/secrets.json` (mode 600)
+- Secrets: `~/.kokoro-xray/secrets.json`
+- Xray config: `/usr/local/etc/xray/config.json`
+- Caddyfile: `/etc/caddy/Caddyfile`
 
-## Architecture
+## Notes
 
-See [docs/architecture.md](docs/architecture.md).
-
-## Requirements
-
-- Debian 11+ or Ubuntu 20.04+
-- root
-- Edge: domain for CDN mode; ports 443/tcp, 80/tcp
-- Exit: UDP 51820 (or custom)
+- Xray downloads are verified with upstream SHA256 digest files.
+- Caddy builds are pinned and rebuilt only when needed.
+- UFW defaults to deny incoming and allow outgoing when firewall support is enabled.
 
 ## License
 

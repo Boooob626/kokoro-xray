@@ -6,6 +6,9 @@ source "${KOKORO_ROOT}/lib/os.sh"
 
 KOKORO_XCADDY_VERSION="${KOKORO_XCADDY_VERSION:-v0.4.6}"
 KOKORO_CADDY_L4_VERSION="${KOKORO_CADDY_L4_VERSION:-v0.1.1}"
+KOKORO_GO_MIN_VERSION="${KOKORO_GO_MIN_VERSION:-1.21.0}"
+KOKORO_GO_VERSION="${KOKORO_GO_VERSION:-1.24.4}"
+KOKORO_GO_PREFIX="${KOKORO_GO_PREFIX:-/usr/local/kokoro-go}"
 
 kokoro_caddy_version() {
     local version
@@ -58,8 +61,83 @@ kokoro_run_with_timer() {
     return "$status"
 }
 
+kokoro_version_ge() {
+    local have="$1" need="$2"
+    local hm hn hp nm nn np
+    IFS=. read -r hm hn hp <<<"$have"
+    IFS=. read -r nm nn np <<<"$need"
+    hp="${hp:-0}"; np="${np:-0}"
+    [[ "$hm" =~ ^[0-9]+$ && "$hn" =~ ^[0-9]+$ && "$hp" =~ ^[0-9]+$ ]] || return 1
+    [[ "$nm" =~ ^[0-9]+$ && "$nn" =~ ^[0-9]+$ && "$np" =~ ^[0-9]+$ ]] || return 1
+    (( hm > nm )) && return 0
+    (( hm < nm )) && return 1
+    (( hn > nn )) && return 0
+    (( hn < nn )) && return 1
+    (( hp >= np ))
+}
+
+kokoro_go_version() {
+    local go_bin="$1" raw
+    raw="$("$go_bin" version 2>/dev/null | awk '{print $3}' | sed 's/^go//; s/[^0-9.].*$//')"
+    [[ -n "$raw" ]] && printf '%s\n' "$raw"
+}
+
+kokoro_go_arch() {
+    case "$(uname -m)" in
+        x86_64 | amd64) echo "amd64" ;;
+        aarch64 | arm64) echo "arm64" ;;
+        *) kokoro_die "unsupported Go architecture: $(uname -m)" ;;
+    esac
+}
+
+kokoro_go_install_official() {
+    local arch url tmp prefix go_bin version
+    arch="$(kokoro_go_arch)"
+    prefix="${KOKORO_GO_PREFIX}/go${KOKORO_GO_VERSION}"
+    go_bin="${prefix}/bin/go"
+
+    if [[ -x "$go_bin" ]]; then
+        version="$(kokoro_go_version "$go_bin")"
+        if kokoro_version_ge "$version" "$KOKORO_GO_MIN_VERSION"; then
+            KOKORO_CADDY_GO_BIN="$go_bin"
+            return 0
+        fi
+    fi
+
+    kokoro_pkg_install curl git ca-certificates tar
+    url="https://go.dev/dl/go${KOKORO_GO_VERSION}.linux-${arch}.tar.gz"
+    tmp="$(mktemp -d)"
+
+    kokoro_log "installing Go ${KOKORO_GO_VERSION} for Caddy build"
+    curl -fsSL "$url" -o "${tmp}/go.tgz" || kokoro_die "failed to download Go ${KOKORO_GO_VERSION}"
+    rm -rf "$prefix"
+    install -d "$KOKORO_GO_PREFIX"
+    tar -C "$KOKORO_GO_PREFIX" -xzf "${tmp}/go.tgz" || kokoro_die "failed to extract Go ${KOKORO_GO_VERSION}"
+    mv "${KOKORO_GO_PREFIX}/go" "$prefix"
+    rm -rf "$tmp"
+    [[ -x "$go_bin" ]] || kokoro_die "Go install failed: $go_bin missing"
+    KOKORO_CADDY_GO_BIN="$go_bin"
+}
+
+kokoro_go_for_caddy() {
+    local go_bin version
+    if go_bin="$(command -v go 2>/dev/null)"; then
+        version="$(kokoro_go_version "$go_bin")"
+        if kokoro_version_ge "$version" "$KOKORO_GO_MIN_VERSION"; then
+            kokoro_log "using Go ${version} for Caddy build"
+            KOKORO_CADDY_GO_BIN="$go_bin"
+            return 0
+        fi
+        kokoro_warn "system Go ${version:-unknown} is too old; need >= ${KOKORO_GO_MIN_VERSION}"
+    fi
+
+    kokoro_go_install_official
+    version="$(kokoro_go_version "$KOKORO_CADDY_GO_BIN")"
+    kokoro_log "using Go ${version} for Caddy build"
+}
+
 kokoro_caddy_install() {
-    local dest caddy_version
+    local dest caddy_version go_bin go_path
     kokoro_need_root
     dest="$(kokoro_cfg '.paths.caddy_bin')"
     caddy_version="$(kokoro_caddy_version)"
@@ -70,19 +148,28 @@ kokoro_caddy_install() {
         return
     fi
 
-    kokoro_pkg_install golang-go curl git
-    GOBIN=/usr/local/bin go install "github.com/caddyserver/xcaddy/cmd/xcaddy@${KOKORO_XCADDY_VERSION}"
+    kokoro_pkg_install curl git ca-certificates tar
+    kokoro_go_for_caddy
+    go_bin="$KOKORO_CADDY_GO_BIN"
+    go_path="$(dirname "$go_bin"):${PATH}"
+    PATH="$go_path"
+    GOBIN=/usr/local/bin "$go_bin" install "github.com/caddyserver/xcaddy/cmd/xcaddy@${KOKORO_XCADDY_VERSION}" \
+        || kokoro_die "failed to install xcaddy ${KOKORO_XCADDY_VERSION}"
+    [[ -x /usr/local/bin/xcaddy ]] || kokoro_die "xcaddy not found after install"
 
     if kokoro_caddy_needs_l4; then
         kokoro_log "building Caddy ${caddy_version} with caddy-l4 ${KOKORO_CADDY_L4_VERSION}"
         kokoro_log "this can take several minutes on small VPS instances"
-        kokoro_run_with_timer "caddy build" xcaddy build "$caddy_version" --with "github.com/mholt/caddy-l4@${KOKORO_CADDY_L4_VERSION}" --output "$dest"
+        kokoro_run_with_timer "caddy build" /usr/local/bin/xcaddy build "$caddy_version" --with "github.com/mholt/caddy-l4@${KOKORO_CADDY_L4_VERSION}" --output "$dest" \
+            || kokoro_die "failed to build Caddy ${caddy_version}"
     else
         kokoro_log "building Caddy ${caddy_version}"
         kokoro_log "this can take several minutes on small VPS instances"
-        kokoro_run_with_timer "caddy build" xcaddy build "$caddy_version" --output "$dest"
+        kokoro_run_with_timer "caddy build" /usr/local/bin/xcaddy build "$caddy_version" --output "$dest" \
+            || kokoro_die "failed to build Caddy ${caddy_version}"
     fi
 
+    [[ -x "$dest" || -f "$dest" ]] || kokoro_die "caddy build did not create $dest"
     chmod 755 "$dest"
     if kokoro_caddy_needs_l4; then
         "$dest" list-modules 2>/dev/null | grep -q 'layer4' || kokoro_die "caddy-l4 module missing after xcaddy build"

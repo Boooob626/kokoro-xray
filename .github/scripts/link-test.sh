@@ -42,9 +42,13 @@ printf '%s\n' "$tls_json" | jq -e '.dns.servers | index("https://base.dns.mullva
 printf '%s\n' "$tls_json" | jq -e '.dns.queryStrategy == "UseIPv4"' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].outboundTag == "BLOCK"' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].domain | index("geosite:category-ads-all")' >/dev/null
-printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].outboundTag == "kokoro-tls"' >/dev/null
-printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].domain | index("domain:googleapis.cn")' >/dev/null
-printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].domain | index("domain:gstatic.cn")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].outboundTag == "BLOCK"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].domain | index("domain:dns.google")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[2].outboundTag == "BLOCK"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[2].ip | index("8.8.8.8")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[3].outboundTag == "kokoro-tls"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[3].domain | index("domain:googleapis.cn")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[3].domain | index("domain:gstatic.cn")' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.domain[]? == "regexp:.*\\.ru$")) | length > 0' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.ip[]? == "geoip:cn")) | length > 0' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules[-1].outboundTag == "kokoro-tls"' >/dev/null

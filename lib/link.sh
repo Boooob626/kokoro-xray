@@ -135,6 +135,27 @@ kokoro_link_tls_json() {
               {
                 type: "field",
                 domain: [
+                  "domain:dns.google",
+                  "domain:dns.google.com",
+                  "domain:doh.google",
+                  "domain:google-public-dns-a.google.com",
+                  "domain:google-public-dns-b.google.com"
+                ],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                ip: [
+                  "8.8.8.8",
+                  "8.8.4.4",
+                  "2001:4860:4860::8888",
+                  "2001:4860:4860::8844"
+                ],
+                outboundTag: "BLOCK"
+              },
+              {
+                type: "field",
+                domain: [
                   "geosite:google",
                   "geosite:youtube",
                   "domain:gmail.com",

@@ -48,6 +48,15 @@ kokoro_link_tls_json() {
         --arg cdn "$cdn" \
         '{
           log: { loglevel: "warning" },
+          dns: {
+            servers: [
+              "https://cloudflare-dns.com/dns-query",
+              "https://1.1.1.1/dns-query",
+              "https://base.dns.mullvad.net/dns-query",
+              "https://extended.dns.mullvad.net/dns-query"
+            ],
+            queryStrategy: "UseIPv4"
+          },
           inbounds: [
             {
               tag: "socks-in",
@@ -118,6 +127,11 @@ kokoro_link_tls_json() {
           routing: {
             domainStrategy: "IPIfNonMatch",
             rules: [
+              {
+                type: "field",
+                domain: ["geosite:category-ads-all"],
+                outboundTag: "BLOCK"
+              },
               {
                 type: "field",
                 domain: [

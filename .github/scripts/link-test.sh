@@ -37,9 +37,14 @@ printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.tlsSettings.alpn
 printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.xhttpSettings.mode == "auto"' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.xhttpSettings.xPaddingObfsMode == true' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.outbounds[0].streamSettings.xhttpSettings.xmux.maxConcurrency == "1-1"' >/dev/null
-printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].outboundTag == "kokoro-tls"' >/dev/null
-printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].domain | index("domain:googleapis.cn")' >/dev/null
-printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].domain | index("domain:gstatic.cn")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.dns.servers | index("https://cloudflare-dns.com/dns-query")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.dns.servers | index("https://base.dns.mullvad.net/dns-query")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.dns.queryStrategy == "UseIPv4"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].outboundTag == "BLOCK"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[0].domain | index("geosite:category-ads-all")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].outboundTag == "kokoro-tls"' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].domain | index("domain:googleapis.cn")' >/dev/null
+printf '%s\n' "$tls_json" | jq -e '.routing.rules[1].domain | index("domain:gstatic.cn")' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.domain[]? == "regexp:.*\\.ru$")) | length > 0' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.ip[]? == "geoip:cn")) | length > 0' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules[-1].outboundTag == "kokoro-tls"' >/dev/null

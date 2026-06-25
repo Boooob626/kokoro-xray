@@ -30,14 +30,16 @@ kokoro_preflight_paths() {
     for key in \
         '.paths.xray_config' \
         '.paths.xray_bin' \
-        '.paths.geo_dir'; do
+        '.paths.geo_dir' \
+        '.paths.hy2_cert' \
+        '.paths.hy2_key'; do
         value="$(kokoro_cfg "$key")"
         [[ -n "$value" && "$value" != "null" ]] || kokoro_die "missing required config path: $key"
     done
 }
 
 kokoro_preflight_edge() {
-    local mode="$1" cdn
+    local mode="$1" cdn hy2_enabled hy2_port
     case "$mode" in
         reality|tls|both) ;;
         *) kokoro_die "invalid inbound.mode: $mode" ;;
@@ -54,6 +56,13 @@ kokoro_preflight_edge() {
     if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
         cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
         [[ -n "$cdn" && "$cdn" != "null" ]] || kokoro_die "inbound.tls.cdn_domain required for tls/both mode"
+    fi
+
+    hy2_enabled="$(kokoro_cfg '.inbound.hy2.enabled // false')"
+    if [[ "$hy2_enabled" == "true" ]]; then
+        hy2_port="$(kokoro_cfg '.inbound.hy2.port')"
+        [[ "$hy2_port" =~ ^[0-9]+$ && "$hy2_port" -ge 1 && "$hy2_port" -le 65535 ]] || kokoro_die "invalid inbound.hy2.port: $hy2_port"
+        [[ -n "$(kokoro_sec '.inbound.hy2.auth')" ]] || kokoro_die "missing inbound.hy2.auth in secrets.json"
     fi
 
     if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then

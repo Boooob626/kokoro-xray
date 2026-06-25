@@ -21,8 +21,14 @@ kokoro_xray_install() {
     kokoro_need_root
     kokoro_xray_load_paths
     tmp="$(mktemp -d)"
-    zip="$(kokoro_xray_download_release_zip "$tmp")"
-    unzip -qo "${tmp}/${zip}" -d "$tmp"
+    if [[ -x "${KOKORO_ROOT}/prebuilt/xray" && -f "${KOKORO_ROOT}/prebuilt/geoip.dat" && -f "${KOKORO_ROOT}/prebuilt/geosite.dat" ]]; then
+        cp "${KOKORO_ROOT}/prebuilt/xray" "${tmp}/xray"
+        cp "${KOKORO_ROOT}/prebuilt/geoip.dat" "${KOKORO_ROOT}/prebuilt/geosite.dat" "$tmp/"
+        kokoro_log "using bundled Xray runtime"
+    else
+        zip="$(kokoro_xray_download_release_zip "$tmp")"
+        unzip -qo "${tmp}/${zip}" -d "$tmp"
+    fi
     install -m 755 "${tmp}/xray" "$dest"
     install -d "$geo_dir"
     install -m 644 "${tmp}/geoip.dat" "${tmp}/geosite.dat" "$geo_dir/"

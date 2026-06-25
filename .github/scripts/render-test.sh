@@ -22,6 +22,26 @@ jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSetting
 jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xPaddingKey == "v"' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xmux.maxConcurrency == "1-1"' "${OUT}/edge-xray.json" >/dev/null
 
+echo "== edge hy2 xray =="
+jq '.inbound.hy2.enabled = true
+    | .inbound.hy2.port = 443
+    | .inbound.hy2.sni = "hy2.example.com"
+    | .paths.hy2_cert = "/tmp/kokoro-test/hy2.crt"
+    | .paths.hy2_key = "/tmp/kokoro-test/hy2.key"' \
+    "${FIX}/edge-single-config.json" >"${OUT}/edge-hy2-config.json"
+jq -n -f "${ROOT}/lib/render.jq" \
+    --slurpfile cfg "${OUT}/edge-hy2-config.json" \
+    --slurpfile sec "${FIX}/edge-secrets.json" \
+    >"${OUT}/edge-hy2-xray.json"
+jq -e '.inbounds | map(.tag) | index("HY2_IN")' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .protocol == "hysteria"' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .settings.version == 2' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .streamSettings.network == "hysteria"' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .streamSettings.security == "tls"' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .streamSettings.tlsSettings.alpn[0] == "h3"' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .streamSettings.hysteriaSettings.version == 2' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .streamSettings.hysteriaSettings.auth == "hy2-test-auth"' "${OUT}/edge-hy2-xray.json" >/dev/null
+
 echo "== edge single-node xray =="
 jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile cfg "${FIX}/edge-single-config.json" \
@@ -55,12 +75,16 @@ jq -e '.outbounds | map(.tag) | index("TOR")' "${OUT}/exit-xray.json" >/dev/null
 jq -e '.routing.rules[0].outboundTag == "TOR"' "${OUT}/exit-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/exit-xray.json" >/dev/null
 
-if command -v xray >/dev/null 2>&1; then
+if command -v xray >/dev/null 2>&1 && {
+    [[ -f "${XRAY_LOCATION_ASSET:-}/geoip.dat" && -f "${XRAY_LOCATION_ASSET:-}/geosite.dat" ]] ||
+    [[ -f /usr/local/share/xray/geoip.dat && -f /usr/local/share/xray/geosite.dat ]] ||
+    [[ -f /usr/bin/geoip.dat && -f /usr/bin/geosite.dat ]]
+}; then
     echo "== xray -test =="
     xray run -test -config "${OUT}/edge-xray.json"
     xray run -test -config "${OUT}/exit-xray.json"
 else
-    echo "skip xray -test (binary not installed)"
+    echo "skip xray -test (binary or geodata not installed)"
 fi
 
 echo "render-test OK"

@@ -7,6 +7,9 @@ tmp_home="$(mktemp -d)"
 install -d -m 700 "${tmp_home}/.kokoro-xray"
 cp "${FIX}/edge-config.json" "${tmp_home}/.kokoro-xray/config.json"
 cp "${FIX}/edge-secrets.json" "${tmp_home}/.kokoro-xray/secrets.json"
+jq '.inbound.hy2.enabled = true | .inbound.hy2.port = 443 | .inbound.hy2.sni = "hy2.example.com"' \
+    "${tmp_home}/.kokoro-xray/config.json" >"${tmp_home}/.kokoro-xray/config.json.tmp"
+mv "${tmp_home}/.kokoro-xray/config.json.tmp" "${tmp_home}/.kokoro-xray/config.json"
 
 HOME="$tmp_home" KOKORO_ROOT="$ROOT" bash <<'SCRIPT'
 set -euo pipefail
@@ -18,6 +21,16 @@ reality="$(kokoro_link_reality_url | tr -d '\n')"
 [[ "$reality" == *"security=reality"* ]]
 [[ "$reality" == *"type=xhttp"* ]]
 [[ "$reality" == *"pbk=${expected_pbk}"* ]]
+
+reality_host="$(kokoro_link_reality_url "198.51.100.10" | tr -d '\n')"
+[[ "$reality_host" == vless://*"@198.51.100.10:443?"* ]]
+
+hy2="$(kokoro_link_hy2_url "198.51.100.10" | tr -d '\n')"
+[[ "$hy2" == hysteria2://* ]]
+[[ "$hy2" == *"@198.51.100.10:443"* ]]
+[[ "$hy2" == *"sni=hy2.example.com"* ]]
+[[ "$hy2" == *"pinSHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"* ]]
+[[ "$hy2" == *"alpn=h3"* ]]
 
 tls="$(kokoro_link_tls_url | tr -d '\n')"
 [[ "$tls" == vless://* ]]
@@ -56,7 +69,24 @@ printf '%s\n' "$tls_json" | jq -e '.routing.rules[-1].outboundTag == "kokoro-tls
 cli_tls_json="$(kokoro_link_show --json tls)"
 printf '%s\n' "$cli_tls_json" | jq -e '.outbounds[0].tag == "kokoro-tls"' >/dev/null
 
-if command -v xray >/dev/null 2>&1; then
+hy2_json="$(kokoro_link_hy2_json "198.51.100.10")"
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].tag == "kokoro-hy2"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].protocol == "hysteria"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].settings.version == 2' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].settings.address == "198.51.100.10"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].settings.port == 443' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.network == "hysteria"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.tlsSettings.pinnedPeerCertSha256 == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.hysteriaSettings.auth == "hy2-test-auth"' >/dev/null
+
+cli_hy2_json="$(kokoro_link_show --json hy2 --host 198.51.100.10)"
+printf '%s\n' "$cli_hy2_json" | jq -e '.outbounds[0].tag == "kokoro-hy2"' >/dev/null
+
+if command -v xray >/dev/null 2>&1 && {
+    [[ -f "${XRAY_LOCATION_ASSET:-}/geoip.dat" && -f "${XRAY_LOCATION_ASSET:-}/geosite.dat" ]] ||
+    [[ -f /usr/local/share/xray/geoip.dat && -f /usr/local/share/xray/geosite.dat ]] ||
+    [[ -f /usr/bin/geoip.dat && -f /usr/bin/geosite.dat ]]
+}; then
     printf '%s\n' "$cli_tls_json" >"${HOME}/.kokoro-xray/client-tls.json"
     xray run -test -config "${HOME}/.kokoro-xray/client-tls.json"
 fi

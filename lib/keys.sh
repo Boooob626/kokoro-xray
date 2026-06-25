@@ -75,13 +75,15 @@ kokoro_secrets_exist() {
 }
 
 kokoro_gen_edge_secrets() {
-    local uuid path sid
+    local uuid path sid hy2_auth
     uuid="$(kokoro_gen_uuid)"
+    hy2_auth="$(kokoro_gen_uuid)"
     path="$(kokoro_rand_path)"
     sid="$(kokoro_rand_short_id)"
     kokoro_sec_set_str '.inbound.uuid' "$uuid"
     kokoro_sec_set_str '.inbound.xhttp_path' "$path"
     kokoro_sec_set '.inbound.reality.short_ids' "[\"${sid}\"]"
+    kokoro_sec_set_str '.inbound.hy2.auth' "$hy2_auth"
     kokoro_gen_reality_keys
     kokoro_gen_edge_wg_keys
 }

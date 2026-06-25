@@ -12,6 +12,12 @@
       "domain": "",
       "cdn_domain": "",
       "acme_email": ""
+    },
+    "hy2": {
+      "enabled": false,
+      "port": 443,
+      "sni": "",
+      "masquerade": "https://www.cloudflare.com/"
     }
   },
   "caddy": {
@@ -42,6 +48,8 @@
     "caddyfile": "/etc/caddy/Caddyfile",
     "xray_bin": "/usr/local/bin/xray",
     "caddy_bin": "/usr/local/bin/caddy",
-    "geo_dir": "/usr/local/share/xray"
+    "geo_dir": "/usr/local/share/xray",
+    "hy2_cert": "/usr/local/etc/xray/hy2.crt",
+    "hy2_key": "/usr/local/etc/xray/hy2.key"
   }
 }

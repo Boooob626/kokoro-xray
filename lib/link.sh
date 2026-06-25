@@ -19,7 +19,7 @@ kokoro_link_tls_url() {
 
 kokoro_link_reality_url() {
     kokoro_ensure_state
-    local uuid path sni pub sid mode host
+    local host="${1:-}" uuid path sni pub sid mode
     mode="$(kokoro_cfg '.inbound.mode')"
     [[ "$mode" == "reality" || "$mode" == "both" ]] || return 0
     uuid="$(kokoro_sec '.inbound.uuid')"
@@ -27,9 +27,109 @@ kokoro_link_reality_url() {
     sni="$(kokoro_cfg '.inbound.reality.server_names[0]')"
     pub="$(kokoro_sec '.inbound.reality.public_key')"
     sid="$(kokoro_sec '.inbound.reality.short_ids[0]')"
-    host="$(curl -4 -s ifconfig.me 2>/dev/null || echo 'YOUR_VPS_IP')"
+    [[ -n "$host" ]] || host="$(curl -4 -s ifconfig.me 2>/dev/null || echo 'YOUR_VPS_IP')"
     printf 'vless://%s@%s:443?encryption=none&security=reality&type=xhttp&path=%s&pbk=%s&fp=chrome&sni=%s&sid=%s#kokoro-reality\n' \
         "$uuid" "$host" "$path" "$pub" "$sni" "$sid"
+}
+
+kokoro_link_hy2_enabled() {
+    [[ "$(kokoro_cfg '.inbound.hy2.enabled // false')" == "true" ]]
+}
+
+kokoro_link_hy2_sni() {
+    local sni
+    sni="$(kokoro_cfg '.inbound.hy2.sni')"
+    [[ -n "$sni" && "$sni" != "null" ]] || sni="$(kokoro_cfg '.inbound.tls.domain')"
+    [[ -n "$sni" && "$sni" != "null" ]] || sni="kokoro-hy2.local"
+    printf '%s\n' "$sni"
+}
+
+kokoro_link_hy2_url() {
+    kokoro_ensure_state
+    local host="${1:-}" auth port sni pin
+    kokoro_link_hy2_enabled || return 0
+    [[ -n "$host" ]] || host="YOUR_VPS_IP_OR_DOMAIN"
+    auth="$(kokoro_sec '.inbound.hy2.auth')"
+    port="$(kokoro_cfg '.inbound.hy2.port')"
+    sni="$(kokoro_link_hy2_sni)"
+    pin="$(kokoro_sec '.inbound.hy2.pinned_peer_cert_sha256')"
+    [[ -n "$pin" && "$pin" != "null" ]] || pin="PIN_AFTER_APPLY"
+    printf 'hysteria2://%s@%s:%s?sni=%s&pinSHA256=%s&alpn=h3#kokoro-hy2\n' \
+        "$auth" "$host" "$port" "$sni" "$pin"
+}
+
+kokoro_link_hy2_json() {
+    kokoro_ensure_state
+    local host="${1:-}" auth port sni pin
+    kokoro_link_hy2_enabled || return 1
+    [[ -n "$host" ]] || kokoro_die "HY2 JSON export requires --host VPS_IP_OR_DOMAIN"
+    auth="$(kokoro_sec '.inbound.hy2.auth')"
+    port="$(kokoro_cfg '.inbound.hy2.port')"
+    sni="$(kokoro_link_hy2_sni)"
+    pin="$(kokoro_sec '.inbound.hy2.pinned_peer_cert_sha256')"
+    [[ -n "$pin" && "$pin" != "null" ]] || kokoro_die "HY2 certificate pin missing; run: sudo kokoro-xray apply"
+
+    jq -n \
+        --arg host "$host" \
+        --arg auth "$auth" \
+        --arg sni "$sni" \
+        --arg pin "$pin" \
+        --argjson port "$port" \
+        '{
+          log: { loglevel: "warning" },
+          inbounds: [
+            {
+              tag: "socks-in",
+              listen: "127.0.0.1",
+              port: 10808,
+              protocol: "socks",
+              settings: { udp: true }
+            },
+            {
+              tag: "http-in",
+              listen: "127.0.0.1",
+              port: 10809,
+              protocol: "http"
+            }
+          ],
+          outbounds: [
+            {
+              tag: "kokoro-hy2",
+              protocol: "hysteria",
+              settings: {
+                version: 2,
+                address: $host,
+                port: $port
+              },
+              streamSettings: {
+                network: "hysteria",
+                security: "tls",
+                tlsSettings: {
+                  serverName: $sni,
+                  fingerprint: "chrome",
+                  alpn: ["h3"],
+                  pinnedPeerCertSha256: $pin
+                },
+                hysteriaSettings: {
+                  version: 2,
+                  auth: $auth,
+                  udpIdleTimeout: 60
+                }
+              }
+            },
+            { tag: "DIRECT", protocol: "freedom" },
+            { tag: "BLOCK", protocol: "blackhole" }
+          ],
+          routing: {
+            domainStrategy: "IPIfNonMatch",
+            rules: [
+              { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
+              { type: "field", domain: ["geosite:private"], outboundTag: "BLOCK" },
+              { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
+              { type: "field", network: "tcp,udp", outboundTag: "kokoro-hy2" }
+            ]
+          }
+        }'
 }
 
 kokoro_link_tls_json() {
@@ -235,19 +335,26 @@ kokoro_link_qr() {
 }
 
 kokoro_link_show() {
-    local show_qr=false json_tls=false
-    local reality_url tls_url
+    local show_qr=false json_profile="" host=""
+    local reality_url tls_url hy2_url
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --qr) show_qr=true; shift ;;
+            --host)
+                [[ -n "${2:-}" ]] || kokoro_die "--host requires a value"
+                host="$2"
+                shift 2
+                ;;
             --json)
                 if [[ $# -ge 2 && "${2:-}" != -* ]]; then
-                    [[ "$2" == "tls" ]] || kokoro_die "unknown JSON profile: $2 (expected tls)"
-                    json_tls=true
+                    case "$2" in
+                        tls|hy2) json_profile="$2" ;;
+                        *) kokoro_die "unknown JSON profile: $2 (expected tls or hy2)" ;;
+                    esac
                     shift 2
                 else
-                    json_tls=true
+                    json_profile="tls"
                     shift
                 fi
                 ;;
@@ -259,10 +366,12 @@ Usage:
   kokoro-xray link
   kokoro-xray link --qr
   kokoro-xray link --json [tls]
+  kokoro-xray link --json hy2 --host VPS_IP_OR_DOMAIN
 
 Options:
+  --host HOST     Public VPS IP or domain for generated client output
   --qr            Print terminal QR codes (requires qrencode)
-  --json [tls]    Print full Xray client JSON for kokoro-tls
+  --json PROFILE  Print full Xray client JSON for tls or hy2
 EOF
                 return 0
                 ;;
@@ -270,15 +379,19 @@ EOF
         esac
     done
 
-    if [[ "$json_tls" == "true" ]]; then
+    if [[ "$json_profile" == "tls" ]]; then
         kokoro_link_tls_json || kokoro_die "tls profile is unavailable for current mode"
+        return 0
+    elif [[ "$json_profile" == "hy2" ]]; then
+        kokoro_link_hy2_json "$host" || kokoro_die "hy2 profile is unavailable; set inbound.hy2.enabled=true"
         return 0
     fi
 
-    reality_url="$(kokoro_link_reality_url)"
+    reality_url="$(kokoro_link_reality_url "$host")"
     tls_url="$(kokoro_link_tls_url)"
+    hy2_url="$(kokoro_link_hy2_url "$host")"
 
-    [[ -n "$reality_url" || -n "$tls_url" ]] || kokoro_die "no links for role/mode (edge required)"
+    [[ -n "$reality_url" || -n "$tls_url" || -n "$hy2_url" ]] || kokoro_die "no links for role/mode (edge required)"
 
     if [[ -n "$reality_url" ]]; then
         printf '%s\n' "$reality_url"
@@ -288,5 +401,10 @@ EOF
     if [[ -n "$tls_url" ]]; then
         printf '%s\n' "$tls_url"
         [[ "$show_qr" == "true" ]] && kokoro_link_qr "$tls_url" "TLS"
+    fi
+
+    if [[ -n "$hy2_url" ]]; then
+        printf '%s\n' "$hy2_url"
+        [[ "$show_qr" == "true" ]] && kokoro_link_qr "$hy2_url" "HY2"
     fi
 }

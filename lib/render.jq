@@ -5,6 +5,7 @@ def cfg: $cfg[0];
 def sec: $sec[0];
 def mode: cfg.inbound.mode;
 def role: cfg.role;
+def hy2_enabled: cfg.inbound.hy2.enabled // false;
 
 def log_block: { log: { loglevel: "warning" } };
 
@@ -75,6 +76,50 @@ def tls_inbound: {
     security: "none",
     xhttpSettings: xhttp_tls_settings,
     sockopt: xhttp_sockopt
+  },
+  sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
+};
+
+def hy2_sni:
+  if (cfg.inbound.hy2.sni // "") != "" then cfg.inbound.hy2.sni
+  elif (cfg.inbound.tls.domain // "") != "" then cfg.inbound.tls.domain
+  else "kokoro-hy2.local" end;
+
+def hy2_inbound: {
+  tag: "HY2_IN",
+  listen: "0.0.0.0",
+  port: cfg.inbound.hy2.port,
+  protocol: "hysteria",
+  settings: {
+    version: 2,
+    users: [{
+      auth: sec.inbound.hy2.auth,
+      level: 0,
+      email: "kokoro-hy2"
+    }]
+  },
+  streamSettings: {
+    network: "hysteria",
+    security: "tls",
+    tlsSettings: {
+      serverName: hy2_sni,
+      alpn: ["h3"],
+      certificates: [{
+        certificateFile: cfg.paths.hy2_cert,
+        keyFile: cfg.paths.hy2_key
+      }]
+    },
+    hysteriaSettings: {
+      version: 2,
+      auth: sec.inbound.hy2.auth,
+      udpIdleTimeout: 60,
+      masquerade: {
+        type: "proxy",
+        url: cfg.inbound.hy2.masquerade,
+        rewriteHost: true,
+        insecure: false
+      }
+    }
   },
   sniffing: { enabled: true, destOverride: ["http", "tls", "quic"] }
 };
@@ -164,7 +209,8 @@ def edge_routing: if cfg.multinode.enabled then edge_multinode_routing else edge
 
 def edge_inbounds:
   (if mode == "reality" or mode == "both" then [reality_inbound] else [] end)
-  + (if mode == "tls" or mode == "both" then [tls_inbound] else [] end);
+  + (if mode == "tls" or mode == "both" then [tls_inbound] else [] end)
+  + (if hy2_enabled then [hy2_inbound] else [] end);
 
 def edge_config: log_block + {
   inbounds: edge_inbounds,

@@ -29,11 +29,21 @@ preflight.sh → render.jq + caddy.jq → validate.sh → firewall.sh → reload
 | `tls` | — | Caddy L7 | Caddy |
 | `both` | Xray `127.0.0.1:8443` | Caddy L4 SNI split | Caddy (xcaddy + caddy-l4) |
 
+HY2 is optional and independent of `inbound.mode`. When `inbound.hy2.enabled=true`, Xray also renders `HY2_IN` on `inbound.hy2.port` UDP, default `443`. It uses Xray's Hysteria2 inbound (`protocol: hysteria`, `version: 2`) and Hysteria transport (`network: hysteria`) with TLS ALPN `h3`.
+
+Kokoro does not reuse Caddy's ACME private storage for HY2. During render/apply, it creates a local certificate at `paths.hy2_cert` and `paths.hy2_key`, computes its SHA-256 pin, and stores that pin in `secrets.json` for client export.
+
 ## REALITY scan
 
 `kokoro-xray reality scan` probes `data/reality-seeds.txt` plus optional `--domains` / `--file`.
 Each host is validated (not bulk-imported): TLS 1.3, ALPN h2, cert SAN, redirect rules.
 Rejects `apple`/`icloud` per Xray-core. Scores by latency + OCSP bonus.
+
+## Runtime assets
+
+The normal install path clones the repo and downloads Xray from upstream releases during edge/exit setup. The optional prebuilt path packages the repo with `prebuilt/xray`, `prebuilt/geoip.dat`, and `prebuilt/geosite.dat`.
+
+`install.sh` attempts the latest GitHub release asset named `kokoro-xray-runtime-linux-amd64.tar.gz` or `kokoro-xray-runtime-linux-arm64.tar.gz` unless a branch install is requested. If the asset is unavailable, it falls back to git clone. `KOKORO_USE_PREBUILT=0` disables the fast path, and `KOKORO_PREBUILT_URL=...` points the installer at a specific tarball.
 
 ## Multi-node pairing
 

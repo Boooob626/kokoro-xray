@@ -108,6 +108,9 @@ kokoro_firewall_warn_only() {
             if [[ "$mode" == "tls" || "$mode" == "both" || "$mode" == "reality" ]]; then
                 kokoro_warn "firewall disabled — ensure: 443/tcp, 80/tcp"
             fi
+            if [[ "$(kokoro_cfg '.inbound.hy2.enabled // false')" == "true" ]]; then
+                kokoro_warn "firewall disabled — ensure: $(kokoro_cfg '.inbound.hy2.port')/udp"
+            fi
             ;;
         exit)
             kokoro_warn "firewall disabled — ensure: ${port}/udp"
@@ -126,6 +129,9 @@ kokoro_firewall_service_rules() {
             if [[ "$mode" == "tls" || "$mode" == "both" || "$mode" == "reality" ]]; then
                 kokoro_firewall_ufw_allow "443/tcp" "kokoro-xray"
                 kokoro_firewall_ufw_allow "80/tcp" "kokoro-acme"
+            fi
+            if [[ "$(kokoro_cfg '.inbound.hy2.enabled // false')" == "true" ]]; then
+                kokoro_firewall_ufw_allow "$(kokoro_cfg '.inbound.hy2.port')/udp" "kokoro-hy2"
             fi
             ;;
         exit)

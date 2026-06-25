@@ -6,6 +6,8 @@ set -euo pipefail
 REPO_URL="${KOKORO_REPO_URL:-https://github.com/takashi728/kokoro-xray}"
 REPO_BRANCH="${KOKORO_REPO_BRANCH:-}"
 INSTALL_DIR="${KOKORO_INSTALL_DIR:-/opt/kokoro-xray}"
+USE_PREBUILT="${KOKORO_USE_PREBUILT:-1}"
+PREBUILT_URL="${KOKORO_PREBUILT_URL:-}"
 CLEAN_INSTALL=false
 INSTALL_ARGS=()
 
@@ -82,6 +84,47 @@ install_bootstrap_deps() {
     fi
 }
 
+release_asset_arch() {
+    case "$(uname -m)" in
+        x86_64) printf 'amd64\n' ;;
+        aarch64|arm64) printf 'arm64\n' ;;
+        *) return 1 ;;
+    esac
+}
+
+repo_latest_asset_url() {
+    local repo arch
+    [[ "$REPO_URL" =~ github.com[:/]+([^/]+)/([^/.]+)(\.git)?$ ]] || return 1
+    repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    arch="$(release_asset_arch)" || return 1
+    printf 'https://github.com/%s/releases/latest/download/kokoro-xray-runtime-linux-%s.tar.gz\n' "$repo" "$arch"
+}
+
+install_prebuilt() {
+    local url tmp
+    [[ "$USE_PREBUILT" != "0" && -z "$REPO_BRANCH" ]] || return 1
+    command -v curl >/dev/null 2>&1 || return 1
+    command -v tar >/dev/null 2>&1 || return 1
+    url="$PREBUILT_URL"
+    [[ -n "$url" ]] || url="$(repo_latest_asset_url)" || return 1
+
+    tmp="$(mktemp -d)"
+    if ! curl -fsSL "$url" -o "${tmp}/runtime.tar.gz"; then
+        rm -rf "$tmp"
+        return 1
+    fi
+
+    remove_install_dir
+    install -d "$INSTALL_DIR"
+    tar -xzf "${tmp}/runtime.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+    rm -rf "$tmp"
+    chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
+    chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
+    chmod +x "${INSTALL_DIR}/prebuilt/xray" 2>/dev/null || true
+    chmod 644 "${INSTALL_DIR}/data/"*.txt "${INSTALL_DIR}/prebuilt/"*.dat 2>/dev/null || true
+    log "installed from prebuilt runtime asset"
+}
+
 install_local() {
     local src="$SCRIPT_DIR"
     [[ -f "${src}/kokoro-xray.sh" ]] || die "run from repo root or set KOKORO_REPO_URL"
@@ -99,6 +142,9 @@ install_local() {
 }
 
 install_remote() {
+    if install_prebuilt; then
+        return 0
+    fi
     install_bootstrap_deps
     remove_install_dir
     if [[ -n "$REPO_BRANCH" ]]; then

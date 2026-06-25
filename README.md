@@ -39,7 +39,7 @@ Install a test branch:
 curl -fsSL https://raw.githubusercontent.com/Boooob626/kokoro-xray/testing/install.sh | sudo env KOKORO_REPO_URL=https://github.com/Boooob626/kokoro-xray bash -s -- --branch testing --edge
 ```
 
-The installer first tries a prebuilt runtime asset from the latest GitHub release. The `testing` branch publishes amd64 and arm64 runtime assets automatically when the branch is pushed. Those assets bundle the repo plus Xray, `geoip.dat`, and `geosite.dat` so VPS setup avoids a second Xray download. If no asset exists, the installer falls back to the normal git clone path. Disable the fast path with:
+The installer first tries a prebuilt runtime asset from the latest GitHub release. The `testing` branch publishes amd64 and arm64 runtime assets automatically when the branch is pushed. Those assets bundle the repo plus Xray, `geoip.dat`, and `geosite.dat` so VPS setup avoids a second Xray download. Branch installs clone fresh branch code first, then hydrate only the bundled runtime files when an asset is available. If no asset exists, the installer falls back to the normal Xray download path. Disable the fast path with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/takashi728/kokoro-xray/main/install.sh | sudo env KOKORO_USE_PREBUILT=0 bash

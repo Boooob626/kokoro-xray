@@ -45,7 +45,9 @@ Rejects `apple`/`icloud` per Xray-core. Scores by latency + OCSP bonus.
 
 The normal install path clones the repo and downloads Xray from upstream releases during edge/exit setup. The optional prebuilt path packages the repo with `prebuilt/xray`, `prebuilt/geoip.dat`, and `prebuilt/geosite.dat`.
 
-`install.sh` attempts the latest GitHub release asset named `kokoro-xray-runtime-linux-amd64.tar.gz` or `kokoro-xray-runtime-linux-arm64.tar.gz` unless a branch install is requested. If the asset is unavailable, it falls back to git clone. `KOKORO_USE_PREBUILT=0` disables the fast path, and `KOKORO_PREBUILT_URL=...` points the installer at a specific tarball.
+For non-branch installs, `install.sh` attempts the latest GitHub release asset named `kokoro-xray-runtime-linux-amd64.tar.gz` or `kokoro-xray-runtime-linux-arm64.tar.gz` first. If the asset is unavailable, it falls back to git clone. `KOKORO_USE_PREBUILT=0` disables the fast path, and `KOKORO_PREBUILT_URL=...` points the installer at a specific tarball.
+
+When `--branch` is used, `install.sh` clones that branch first and then hydrates only `prebuilt/` from the release asset. That keeps branch code current while still avoiding the VPS-side Xray/geodata download.
 
 The `Runtime Assets` workflow builds amd64 and arm64 assets on pushes to `testing`, uploads both tarballs plus `.sha256` files, and attaches them to the `testing-runtime` release.
 

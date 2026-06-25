@@ -100,22 +100,30 @@ repo_latest_asset_url() {
     printf 'https://github.com/%s/releases/latest/download/kokoro-xray-runtime-linux-%s.tar.gz\n' "$repo" "$arch"
 }
 
-install_prebuilt() {
-    local url tmp
-    [[ "$USE_PREBUILT" != "0" && -z "$REPO_BRANCH" ]] || return 1
+download_prebuilt_asset() {
+    local out_dir="$1" url
+    [[ "$USE_PREBUILT" != "0" ]] || return 1
     command -v curl >/dev/null 2>&1 || return 1
     command -v tar >/dev/null 2>&1 || return 1
     url="$PREBUILT_URL"
     [[ -n "$url" ]] || url="$(repo_latest_asset_url)" || return 1
 
-    tmp="$(mktemp -d)"
-    if ! curl -fsSL "$url" -o "${tmp}/runtime.tar.gz"; then
-        rm -rf "$tmp"
+    if ! curl -fsSL "$url" -o "${out_dir}/runtime.tar.gz"; then
         return 1
     fi
-    if curl -fsSL "${url}.sha256" -o "${tmp}/runtime.tar.gz.sha256" 2>/dev/null; then
-        awk '{print $1 "  runtime.tar.gz"}' "${tmp}/runtime.tar.gz.sha256" >"${tmp}/runtime.tar.gz.sha256.check"
-        (cd "$tmp" && sha256sum -c runtime.tar.gz.sha256.check) >/dev/null || die "prebuilt runtime checksum failed"
+    if curl -fsSL "${url}.sha256" -o "${out_dir}/runtime.tar.gz.sha256" 2>/dev/null; then
+        awk '{print $1 "  runtime.tar.gz"}' "${out_dir}/runtime.tar.gz.sha256" >"${out_dir}/runtime.tar.gz.sha256.check"
+        (cd "$out_dir" && sha256sum -c runtime.tar.gz.sha256.check) >/dev/null || die "prebuilt runtime checksum failed"
+    fi
+}
+
+install_prebuilt() {
+    local tmp
+    [[ -z "$REPO_BRANCH" ]] || return 1
+    tmp="$(mktemp -d)"
+    if ! download_prebuilt_asset "$tmp"; then
+        rm -rf "$tmp"
+        return 1
     fi
 
     remove_install_dir
@@ -127,6 +135,24 @@ install_prebuilt() {
     chmod +x "${INSTALL_DIR}/prebuilt/xray" 2>/dev/null || true
     chmod 644 "${INSTALL_DIR}/data/"*.txt "${INSTALL_DIR}/prebuilt/"*.dat 2>/dev/null || true
     log "installed from prebuilt runtime asset"
+}
+
+hydrate_prebuilt_runtime() {
+    local tmp
+    tmp="$(mktemp -d)"
+    if ! download_prebuilt_asset "$tmp"; then
+        rm -rf "$tmp"
+        return 1
+    fi
+
+    tar -xzf "${tmp}/runtime.tar.gz" -C "$tmp"
+    if [[ -x "${tmp}/kokoro-xray/prebuilt/xray" && -f "${tmp}/kokoro-xray/prebuilt/geoip.dat" && -f "${tmp}/kokoro-xray/prebuilt/geosite.dat" ]]; then
+        cp -a "${tmp}/kokoro-xray/prebuilt" "${INSTALL_DIR}/"
+        chmod +x "${INSTALL_DIR}/prebuilt/xray" 2>/dev/null || true
+        chmod 644 "${INSTALL_DIR}/prebuilt/"*.dat 2>/dev/null || true
+        log "hydrated prebuilt Xray runtime"
+    fi
+    rm -rf "$tmp"
 }
 
 install_local() {
@@ -156,6 +182,7 @@ install_remote() {
     else
         git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
     fi
+    hydrate_prebuilt_runtime || true
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
     chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
     chmod 644 "${INSTALL_DIR}/data/"*.txt 2>/dev/null || true

@@ -175,7 +175,7 @@ The scanner checks DNS, TLS 1.3, ALPN `h2`, certificate coverage, and redirect b
 
 - Xray downloads are verified with upstream SHA256 digest files.
 - Prebuilt runtime assets are optional; missing assets fall back to source install and verified Xray download.
-- Caddy builds are pinned and rebuilt only when needed.
+- TLS-only Caddy installs use the official release binary with checksum verification; `both` mode builds Caddy with caddy-l4 only when needed.
 - If distro Go is too old, Caddy builds use a managed Go toolchain under `/usr/local/kokoro-go`.
 - UFW defaults to deny incoming and allow outgoing when firewall support is enabled.
 

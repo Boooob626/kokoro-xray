@@ -90,6 +90,39 @@ kokoro_go_arch() {
     esac
 }
 
+kokoro_caddy_release_arch() {
+    case "$(uname -m)" in
+        x86_64 | amd64) echo "amd64" ;;
+        aarch64 | arm64) echo "arm64" ;;
+        *) kokoro_die "unsupported Caddy architecture: $(uname -m)" ;;
+    esac
+}
+
+kokoro_caddy_install_official() {
+    local dest="$1" caddy_version="$2"
+    local plain_version arch asset base_url tmp expected
+
+    plain_version="${caddy_version#v}"
+    arch="$(kokoro_caddy_release_arch)"
+    asset="caddy_${plain_version}_linux_${arch}.tar.gz"
+    base_url="https://github.com/caddyserver/caddy/releases/download/${caddy_version}"
+    tmp="$(mktemp -d)"
+
+    if ! command -v curl >/dev/null 2>&1 || ! command -v tar >/dev/null 2>&1 || ! command -v sha512sum >/dev/null 2>&1; then
+        kokoro_pkg_install curl ca-certificates tar coreutils
+    fi
+    kokoro_log "downloading official Caddy ${caddy_version} (${arch})"
+    curl -fsSL "${base_url}/${asset}" -o "${tmp}/${asset}" || { rm -rf "$tmp"; return 1; }
+    curl -fsSL "${base_url}/caddy_${plain_version}_checksums.txt" -o "${tmp}/checksums.txt" || { rm -rf "$tmp"; return 1; }
+    expected="$(awk -v f="$asset" '$2 == f { print $1; exit }' "${tmp}/checksums.txt")"
+    [[ -n "$expected" ]] || { rm -rf "$tmp"; return 1; }
+    printf '%s  %s\n' "$expected" "${tmp}/${asset}" | sha512sum -c - >/dev/null || { rm -rf "$tmp"; return 1; }
+
+    tar -xzf "${tmp}/${asset}" -C "$tmp" caddy || { rm -rf "$tmp"; return 1; }
+    install -m 755 "${tmp}/caddy" "$dest"
+    rm -rf "$tmp"
+}
+
 kokoro_go_install_official() {
     local arch url tmp prefix go_bin version
     arch="$(kokoro_go_arch)"
@@ -146,6 +179,15 @@ kokoro_caddy_install() {
         kokoro_log "caddy ${caddy_version} already installed"
         kokoro_caddy_install_service
         return
+    fi
+
+    if ! kokoro_caddy_needs_l4; then
+        if kokoro_caddy_install_official "$dest" "$caddy_version"; then
+            kokoro_log "caddy ${caddy_version} installed to ${dest}"
+            kokoro_caddy_install_service
+            return
+        fi
+        kokoro_warn "official Caddy download failed; falling back to local build"
     fi
 
     kokoro_pkg_install curl git ca-certificates tar

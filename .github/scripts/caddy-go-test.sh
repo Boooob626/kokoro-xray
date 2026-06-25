@@ -17,6 +17,11 @@ if kokoro_version_ge 1.20.14 1.21.0; then
 fi
 echo "version_compare OK"
 
+case "$(kokoro_caddy_release_arch)" in
+    amd64|arm64) echo "release_arch OK" ;;
+    *) echo "bad caddy release arch" >&2; exit 1 ;;
+esac
+
 cat >"${TMP}/old/go" <<'EOF'
 #!/usr/bin/env bash
 echo "go version go1.20.14 linux/amd64"

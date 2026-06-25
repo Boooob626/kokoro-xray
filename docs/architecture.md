@@ -33,6 +33,8 @@ HY2 is optional and independent of `inbound.mode`. When `inbound.hy2.enabled=tru
 
 Kokoro does not reuse Caddy's ACME private storage for HY2. During render/apply, it creates a local certificate at `paths.hy2_cert` and `paths.hy2_key`, computes its SHA-256 pin, and stores that pin in `secrets.json` for client export.
 
+The exported HY2 client JSON avoids geodata dependencies. It uses explicit private CIDR blocks instead of `geoip:private` or `geosite:private`, and `domainStrategy: AsIs` to avoid DNS pre-resolution during routing.
+
 ## REALITY scan
 
 `kokoro-xray reality scan` probes `data/reality-seeds.txt` plus optional `--domains` / `--file`.

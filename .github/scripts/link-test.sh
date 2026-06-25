@@ -78,9 +78,18 @@ printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].settings.port == 443' >/dev/nul
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.network == "hysteria"' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.tlsSettings.pinnedPeerCertSha256 == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.hysteriaSettings.auth == "hy2-test-auth"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.routing.domainStrategy == "AsIs"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.routing.rules[0].ip | index("10.0.0.0/8")' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.routing.rules[0].ip | index("fc00::/7")' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '[.. | strings | select(test("^(geoip|geosite):"))] | length == 0' >/dev/null
 
 cli_hy2_json="$(kokoro_link_show --json hy2 --host 198.51.100.10)"
 printf '%s\n' "$cli_hy2_json" | jq -e '.outbounds[0].tag == "kokoro-hy2"' >/dev/null
+
+if command -v xray >/dev/null 2>&1; then
+    printf '%s\n' "$cli_hy2_json" >"${HOME}/.kokoro-xray/client-hy2.json"
+    xray run -test -config "${HOME}/.kokoro-xray/client-hy2.json"
+fi
 
 if command -v xray >/dev/null 2>&1 && {
     [[ -f "${XRAY_LOCATION_ASSET:-}/geoip.dat" && -f "${XRAY_LOCATION_ASSET:-}/geosite.dat" ]] ||

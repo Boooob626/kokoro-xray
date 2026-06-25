@@ -39,6 +39,8 @@ Install a test branch:
 curl -fsSL https://raw.githubusercontent.com/Boooob626/kokoro-xray/testing/install.sh | sudo env KOKORO_REPO_URL=https://github.com/Boooob626/kokoro-xray bash -s -- --branch testing --edge
 ```
 
+During edge setup, choose `reality`, `tls`, or `both` for the VLESS inbound mode. HY2 is a separate UDP acceleration option; answer `y` at `Enable HY2 UDP acceleration?`, keep port `443` unless you need a custom UDP port, and set the HY2 SNI to your domain.
+
 The installer first tries a prebuilt runtime asset from the latest GitHub release. The `testing` branch publishes amd64 and arm64 runtime assets automatically when the branch is pushed. Those assets bundle the repo plus Xray, `geoip.dat`, and `geosite.dat` so VPS setup avoids a second Xray download. Branch installs clone fresh branch code first, then hydrate only the bundled runtime files when an asset is available. If no asset exists, the installer falls back to the normal Xray download path. Disable the fast path with:
 
 ```bash
@@ -120,7 +122,7 @@ HY2 uses Xray's native Hysteria2 protocol over UDP with TLS ALPN `h3`. Kokoro ge
 
 The HY2 client JSON is self-contained: it does not require `geoip.dat` or `geosite.dat`, and it uses `AsIs` routing so ordinary domain traffic is sent to HY2 without pre-resolving domains for routing.
 
-Enable HY2 before apply:
+If you skipped HY2 during setup, enable it before apply:
 
 ```bash
 jq '.inbound.hy2.enabled = true | .inbound.hy2.sni = "your-domain.example"' ~/.kokoro-xray/config.json > /tmp/kokoro.json

@@ -117,6 +117,15 @@ download_prebuilt_asset() {
     fi
 }
 
+extract_prebuilt_tar() {
+    local tarball="$1" dest="$2"
+    if tar --warning=no-timestamp -tzf "$tarball" >/dev/null 2>&1; then
+        tar --warning=no-timestamp -xzf "$tarball" -C "$dest"
+    else
+        tar -xzf "$tarball" -C "$dest"
+    fi
+}
+
 install_prebuilt() {
     local tmp
     [[ -z "$REPO_BRANCH" ]] || return 1
@@ -128,7 +137,11 @@ install_prebuilt() {
 
     remove_install_dir
     install -d "$INSTALL_DIR"
-    tar -xzf "${tmp}/runtime.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+    if tar --warning=no-timestamp -tzf "${tmp}/runtime.tar.gz" >/dev/null 2>&1; then
+        tar --warning=no-timestamp -xzf "${tmp}/runtime.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+    else
+        tar -xzf "${tmp}/runtime.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+    fi
     rm -rf "$tmp"
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
     chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
@@ -145,7 +158,7 @@ hydrate_prebuilt_runtime() {
         return 1
     fi
 
-    tar -xzf "${tmp}/runtime.tar.gz" -C "$tmp"
+    extract_prebuilt_tar "${tmp}/runtime.tar.gz" "$tmp"
     if [[ -x "${tmp}/kokoro-xray/prebuilt/xray" && -f "${tmp}/kokoro-xray/prebuilt/geoip.dat" && -f "${tmp}/kokoro-xray/prebuilt/geosite.dat" ]]; then
         cp -a "${tmp}/kokoro-xray/prebuilt" "${INSTALL_DIR}/"
         chmod +x "${INSTALL_DIR}/prebuilt/xray" 2>/dev/null || true

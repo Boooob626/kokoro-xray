@@ -113,6 +113,10 @@ install_prebuilt() {
         rm -rf "$tmp"
         return 1
     fi
+    if curl -fsSL "${url}.sha256" -o "${tmp}/runtime.tar.gz.sha256" 2>/dev/null; then
+        awk '{print $1 "  runtime.tar.gz"}' "${tmp}/runtime.tar.gz.sha256" >"${tmp}/runtime.tar.gz.sha256.check"
+        (cd "$tmp" && sha256sum -c runtime.tar.gz.sha256.check) >/dev/null || die "prebuilt runtime checksum failed"
+    fi
 
     remove_install_dir
     install -d "$INSTALL_DIR"

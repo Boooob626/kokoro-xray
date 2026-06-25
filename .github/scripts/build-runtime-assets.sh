@@ -61,5 +61,7 @@ install -m 755 "${tmp}/xray/xray" "$stage/prebuilt/xray"
 install -m 644 "${tmp}/xray/geoip.dat" "${tmp}/xray/geosite.dat" "$stage/prebuilt/"
 
 mkdir -p "$OUT"
-tar -C "$tmp" -czf "${OUT}/kokoro-xray-runtime-linux-${asset_arch}.tar.gz" kokoro-xray
-echo "${OUT}/kokoro-xray-runtime-linux-${asset_arch}.tar.gz"
+asset="kokoro-xray-runtime-linux-${asset_arch}.tar.gz"
+tar -C "$tmp" -czf "${OUT}/${asset}" kokoro-xray
+(cd "$OUT" && sha256sum "$asset" >"${asset}.sha256")
+echo "${OUT}/${asset}"

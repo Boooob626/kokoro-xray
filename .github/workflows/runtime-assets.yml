@@ -23,4 +23,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kokoro-xray-runtime-linux-${{ matrix.arch }}
-          path: dist/kokoro-xray-runtime-linux-${{ matrix.arch }}.tar.gz
+          path: |
+            dist/kokoro-xray-runtime-linux-${{ matrix.arch }}.tar.gz
+            dist/kokoro-xray-runtime-linux-${{ matrix.arch }}.tar.gz.sha256

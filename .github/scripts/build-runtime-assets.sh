@@ -4,18 +4,30 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUT="${1:-${ROOT}/dist}"
 XRAY_VERSION="${KOKORO_XRAY_VERSION:-v26.6.1}"
+TARGET_ARCH="${KOKORO_ASSET_ARCH:-}"
 
-case "$(uname -m)" in
-    x86_64)
+if [[ -z "$TARGET_ARCH" ]]; then
+    case "$(uname -m)" in
+        x86_64) TARGET_ARCH="amd64" ;;
+        aarch64|arm64) TARGET_ARCH="arm64" ;;
+        *)
+            echo "unsupported arch: $(uname -m)" >&2
+            exit 1
+            ;;
+    esac
+fi
+
+case "$TARGET_ARCH" in
+    amd64)
         xray_arch="64"
         asset_arch="amd64"
         ;;
-    aarch64|arm64)
+    arm64)
         xray_arch="arm64-v8a"
         asset_arch="arm64"
         ;;
     *)
-        echo "unsupported arch: $(uname -m)" >&2
+        echo "unsupported target arch: $TARGET_ARCH" >&2
         exit 1
         ;;
 esac

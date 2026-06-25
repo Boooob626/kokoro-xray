@@ -45,6 +45,8 @@ The normal install path clones the repo and downloads Xray from upstream release
 
 `install.sh` attempts the latest GitHub release asset named `kokoro-xray-runtime-linux-amd64.tar.gz` or `kokoro-xray-runtime-linux-arm64.tar.gz` unless a branch install is requested. If the asset is unavailable, it falls back to git clone. `KOKORO_USE_PREBUILT=0` disables the fast path, and `KOKORO_PREBUILT_URL=...` points the installer at a specific tarball.
 
+The `Runtime Assets` workflow builds amd64 and arm64 assets on pushes to `testing`, uploads both tarballs plus `.sha256` files, and attaches them to the `testing-runtime` release.
+
 ## Multi-node pairing
 
 1. Install **exit** → copy `exit_wg_pubkey`

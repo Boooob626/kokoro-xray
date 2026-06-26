@@ -11,6 +11,18 @@ jq '.inbound.hy2.enabled = true | .inbound.hy2.port = 443 | .inbound.hy2.sni = "
     "${tmp_home}/.kokoro-xray/config.json" >"${tmp_home}/.kokoro-xray/config.json.tmp"
 mv "${tmp_home}/.kokoro-xray/config.json.tmp" "${tmp_home}/.kokoro-xray/config.json"
 
+tmp_migrate="$(mktemp -d)"
+install -d -m 700 "${tmp_migrate}/.kokoro-xray"
+cp "${tmp_home}/.kokoro-xray/config.json" "${tmp_migrate}/.kokoro-xray/config.json"
+jq '.inbound.hy2.auth = ""' "${tmp_home}/.kokoro-xray/secrets.json" >"${tmp_migrate}/.kokoro-xray/secrets.json"
+HOME="$tmp_migrate" KOKORO_ROOT="$ROOT" bash <<'SCRIPT'
+set -euo pipefail
+source "${KOKORO_ROOT}/lib/common.sh"
+kokoro_ensure_state
+[[ -n "$(kokoro_sec '.inbound.hy2.auth')" ]]
+SCRIPT
+rm -rf "$tmp_migrate"
+
 HOME="$tmp_home" KOKORO_ROOT="$ROOT" bash <<'SCRIPT'
 set -euo pipefail
 source "${KOKORO_ROOT}/lib/link.sh"

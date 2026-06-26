@@ -6,6 +6,7 @@ source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 kokoro_migrate() {
     local ver tmp
     kokoro_migrate_merge_defaults
+    kokoro_migrate_hy2_secret
 
     ver="$(kokoro_cfg '.version // "0.1.0"')"
 
@@ -21,6 +22,27 @@ kokoro_migrate() {
             "${KOKORO_CONFIG}" >"$tmp"
         mv "$tmp" "${KOKORO_CONFIG}"
     fi
+}
+
+kokoro_migrate_hy2_secret() {
+    local auth tmp
+
+    auth="$(jq -r '.inbound.hy2.auth // ""' "${KOKORO_SECRETS}")"
+    [[ -n "$auth" && "$auth" != "null" ]] && return 0
+
+    if [[ -r /proc/sys/kernel/random/uuid ]]; then
+        auth="$(cat /proc/sys/kernel/random/uuid)"
+    else
+        auth="$(openssl rand -hex 16)"
+    fi
+
+    tmp="$(mktemp)"
+    jq --arg auth "$auth" '
+      .inbound.hy2.auth = $auth
+      | .inbound.hy2.pinned_peer_cert_sha256 = (.inbound.hy2.pinned_peer_cert_sha256 // "")
+    ' "${KOKORO_SECRETS}" >"$tmp"
+    mv "$tmp" "${KOKORO_SECRETS}"
+    chmod 600 "${KOKORO_SECRETS}"
 }
 
 kokoro_migrate_merge_defaults() {

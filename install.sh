@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-REPO_URL="${KOKORO_REPO_URL:-https://github.com/takashi728/kokoro-xray}"
+REPO_URL="${KOKORO_REPO_URL:-https://github.com/Boooob626/kokoro-xray}"
 REPO_BRANCH="${KOKORO_REPO_BRANCH:-}"
 INSTALL_DIR="${KOKORO_INSTALL_DIR:-/opt/kokoro-xray}"
 USE_PREBUILT="${KOKORO_USE_PREBUILT:-1}"

@@ -193,38 +193,24 @@ What Kokoro should learn:
 Do not import its full Nginx/Cloudreve/WARP stack into Kokoro. That repo is a
 feature kitchen sink; Kokoro should stay a small Xray edge manager.
 
-## Other repo idea scan
+## Other repo scan
 
-Repos sampled:
+Repos checked for ideas:
 
 - `mack-a/v2ray-agent`
 - `233boy/Xray`
 - `MHSanaei/3x-ui`
 
-Useful ideas to keep:
-
-| Idea | Source pattern | Kokoro decision |
-| --- | --- | --- |
-| Salted subscription files | `v2ray-agent` builds per-user default/Clash/sing-box subscriptions | Worth adding later as `kokoro-xray sub`, but not needed for single-user raw JSON |
-| Traffic counters | `Xray-script`, `233boy`, and `3x-ui` use Xray API/stats | Best next small feature if quota/usage matters |
-| Health monitor | `3x-ui` can probe a tunnel and restart after repeated failures | Worth adding as a simple `systemd` timer only if real VPS drops appear |
-| Backup/export | Panels keep DB/config backups | Kokoro can add `snapshot export` before adding any database/panel |
-| Per-client expiry/quota/IP limit | `3x-ui` panel feature | Do not add until Kokoro supports multiple named clients |
-| WARP routing | `v2ray-agent` and `3x-ui` route selected traffic through WARP | Add only if IP reputation or region egress becomes a real need |
-| Dynamic ports/mKCP seed | `233boy/Xray` supports mKCP and seed changes | Keep out of default; HY2 is the better UDP path here |
-| NAT64/IPv6-only hints | `v2ray-agent` handles IPv6-only host edge cases | Good doc idea if users run IPv6-only VPS |
-| Panel/API/Bot | `3x-ui` has REST API and Telegram bot | Too heavy for Kokoro's shell-first design |
-
-Best next feature if Kokoro grows:
+Ideas worth copying only when needed:
 
 ```text
-1. traffic: Xray API stats summary
-2. sub: local JSON/subscription bundle export
-3. snapshot export/import: portable backup for config + secrets
+traffic: Xray API stats summary, if quota/usage accounting matters
+sub: local JSON/subscription bundle export, if raw JSON stops being enough
+snapshot export/import: portable config + secrets backup, before any database
 ```
 
-Skip for now:
+Skip:
 
 ```text
-panel, database, Telegram bot, Docker WARP stack, Nginx stack, multi-protocol kitchen sink
+panel, database, Telegram bot, Docker WARP, Nginx stack, mKCP, kitchen-sink protocols
 ```

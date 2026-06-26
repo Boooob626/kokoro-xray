@@ -19,8 +19,14 @@ jobs:
         run: bash .github/scripts/reality-scan-test.sh
       - name: Run network-tune tests
         run: bash .github/scripts/network-tune-test.sh
+      - name: Run download verify tests
+        run: bash .github/scripts/download-verify-test.sh
+      - name: Run Caddy Go tests
+        run: bash .github/scripts/caddy-go-test.sh
       - name: Run link tests
         run: bash .github/scripts/link-test.sh
+      - name: Run health tests
+        run: bash .github/scripts/health-test.sh
       - name: Run firewall tests
         run: bash .github/scripts/firewall-test.sh
       - name: Run source path tests

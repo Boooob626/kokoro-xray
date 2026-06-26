@@ -12,6 +12,8 @@ The scripts keep state in JSON, render configs with `jq`, validate before reload
 - TLS edge: Caddy handles ACME and HTTPS routing
 - REALITY edge: Xray serves public `:443` directly
 
+For a ranked speed/latency setup guide, see [`docs/top3-pipelines.md`](docs/top3-pipelines.md).
+
 ## Requirements
 
 - Debian or Ubuntu

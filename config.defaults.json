@@ -19,9 +19,6 @@
       "masquerade": "https://www.cloudflare.com/"
     }
   },
-  "caddy": {
-    "version": "2.9.1"
-  },
   "multinode": {
     "enabled": false,
     "exit_ip": "",

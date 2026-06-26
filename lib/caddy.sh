@@ -4,15 +4,7 @@
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 source "${KOKORO_ROOT}/lib/os.sh"
 
-kokoro_caddy_version() {
-    local version
-    version="$(kokoro_cfg '.caddy.version')"
-    [[ -n "$version" && "$version" != "null" ]] || kokoro_die "missing caddy.version"
-    case "$version" in
-        v*) printf '%s\n' "$version" ;;
-        *) printf 'v%s\n' "$version" ;;
-    esac
-}
+KOKORO_CADDY_VERSION="${KOKORO_CADDY_VERSION:-v2.9.1}"
 
 kokoro_caddy_release_arch() {
     case "$(uname -m)" in
@@ -33,7 +25,7 @@ kokoro_caddy_install() {
     local dest caddy_version plain_version arch asset base_url tmp expected
     kokoro_need_root
     dest="$(kokoro_cfg '.paths.caddy_bin')"
-    caddy_version="$(kokoro_caddy_version)"
+    caddy_version="$KOKORO_CADDY_VERSION"
 
     if kokoro_caddy_installed_matches "$dest" "$caddy_version"; then
         kokoro_log "caddy ${caddy_version} already installed"

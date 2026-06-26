@@ -34,7 +34,7 @@ kokoro_dispatch() {
     case "$cmd" in
         edge)    bash "${KOKORO_ROOT}/roles/edge.sh" "$@" ;;
         exit)    bash "${KOKORO_ROOT}/roles/exit.sh" "$@" ;;
-        link)    bash "${KOKORO_ROOT}/roles/client.sh" "$@" ;;
+        link)    source "${KOKORO_ROOT}/lib/link.sh"; kokoro_link_show "$@" ;;
         firewall)
             shift || true
             source "${KOKORO_ROOT}/lib/firewall.sh"
@@ -57,7 +57,7 @@ kokoro_dispatch() {
             ;;
         reality)
             case "${1:-}" in
-                scan) shift; bash "${KOKORO_ROOT}/roles/reality-scan.sh" "$@" ;;
+                scan) shift; source "${KOKORO_ROOT}/lib/reality-scan.sh"; kokoro_reality_scan "$@" ;;
                 *) kokoro_die "usage: kokoro-xray reality scan [--apply|--select]" ;;
             esac ;;
         tune)
@@ -91,7 +91,7 @@ while true; do
     case "$choice" in
         1) bash "${KOKORO_ROOT}/roles/edge.sh" --keep-secrets --apply-edge ;;
         2) bash "${KOKORO_ROOT}/roles/exit.sh" --keep-secrets ;;
-        3) bash "${KOKORO_ROOT}/roles/client.sh" --qr ;;
+        3) source "${KOKORO_ROOT}/lib/link.sh"; kokoro_link_show --qr ;;
         4) source "${KOKORO_ROOT}/lib/apply.sh"; kokoro_apply ;;
         5) bash "${KOKORO_ROOT}/roles/pair.sh" ;;
         6)
@@ -110,7 +110,7 @@ while true; do
             ;;
         8) source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
         9) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
-        10) bash "${KOKORO_ROOT}/roles/reality-scan.sh" --limit 10 ;;
+        10) source "${KOKORO_ROOT}/lib/reality-scan.sh"; kokoro_reality_scan --limit 10 ;;
         11) source "${KOKORO_ROOT}/lib/network-tune.sh"; kokoro_need_root; kokoro_network_tune ;;
         q|Q) exit 0 ;;
         *) kokoro_warn "$(kokoro_t invalid_choice)" ;;

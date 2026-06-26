@@ -21,7 +21,6 @@ source "${KOKORO_ROOT}/lib/xray.sh"
 source "${KOKORO_ROOT}/lib/caddy.sh"
 source "${KOKORO_ROOT}/lib/keys.sh"
 source "${KOKORO_ROOT}/lib/onboard.sh"
-source "${KOKORO_ROOT}/lib/cf.sh"
 source "${KOKORO_ROOT}/lib/apply.sh"
 source "${KOKORO_ROOT}/lib/network-tune.sh"
 
@@ -38,7 +37,6 @@ kokoro_edge_install() {
     mode="$(kokoro_cfg '.inbound.mode')"
     if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
         kokoro_caddy_install
-        kokoro_cf_dns01_hint
     fi
 
     if [[ "$FORCE_SECRETS" == "true" ]]; then

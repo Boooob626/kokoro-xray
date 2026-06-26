@@ -10,7 +10,7 @@ if [ -n "${heavy}" ]; then
     exit 1
 fi
 
-for lib in apply caddy cf geodata health keys os preflight reload render snapshot validate xray; do
+for lib in apply caddy geodata health keys os preflight reload render snapshot validate xray; do
     bash -c "source '${ROOT}/lib/${lib}.sh'" "${ROOT}/roles/edge.sh"
 done
 

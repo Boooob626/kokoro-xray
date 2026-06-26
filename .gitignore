@@ -3,3 +3,13 @@
 .DS_Store
 .env
 .env.*
+prebuilt/
+*.dat
+*.tar
+*.tar.*
+*.zip
+*.gz
+*.xz
+*.zst
+*.deb
+*.rpm

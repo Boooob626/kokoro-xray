@@ -21,8 +21,7 @@
     }
   },
   "caddy": {
-    "version": "2.9.1",
-    "use_l4": true
+    "version": "2.9.1"
   },
   "multinode": {
     "enabled": false,

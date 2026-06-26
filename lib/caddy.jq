@@ -10,7 +10,7 @@ def path: sec.inbound.xhttp_path;
 def email: if cfg.inbound.tls.acme_email != "" then cfg.inbound.tls.acme_email else "admin@\(.cdn)" end;
 def tls_ports: [(cfg.inbound.tls.ports // [443])[] | tonumber] | unique;
 
-def l4_block: if cfg.caddy.use_l4 and cfg.inbound.mode == "both" then
+def l4_block: if cfg.inbound.mode == "both" then
   "
     servers :443 {
         listener_wrappers {

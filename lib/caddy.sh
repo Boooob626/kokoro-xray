@@ -21,10 +21,7 @@ kokoro_caddy_version() {
 }
 
 kokoro_caddy_needs_l4() {
-    local mode use_l4
-    mode="$(kokoro_cfg '.inbound.mode')"
-    use_l4="$(kokoro_cfg '.caddy.use_l4')"
-    [[ "$use_l4" == "true" && "$mode" == "both" ]]
+    [[ "$(kokoro_cfg '.inbound.mode')" == "both" ]]
 }
 
 kokoro_caddy_installed_matches() {

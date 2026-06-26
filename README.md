@@ -12,8 +12,6 @@ The scripts keep state in JSON, render configs with `jq`, validate before reload
 - TLS edge: Caddy handles ACME and HTTPS routing
 - REALITY edge: Xray serves public `:443` directly
 
-For a ranked speed/latency setup guide, see [`docs/top3-pipelines.md`](docs/top3-pipelines.md).
-
 ## Requirements
 
 - Debian or Ubuntu
@@ -97,6 +95,36 @@ kokoro-xray link --json hy2 --host auto6
 ```
 
 Use `--host auto6` when HY2 should connect to the VPS IPv6 address while the SNI domain only has an A record.
+
+## Fast Paths
+
+HY2 over IPv6 UDP:
+
+```bash
+sudo kokoro-xray edge
+sudo kokoro-xray apply
+sudo kokoro-xray tune
+sudo kokoro-xray link --json hy2 --host auto6 | jq .
+```
+
+TLS XHTTP with multi-port jump:
+
+```bash
+sudo jq '.inbound.mode = "tls" | .inbound.tls.ports = [443, 8443, 2053, 2083]' /root/.kokoro-xray/config.json > /tmp/kokoro.json
+sudo mv /tmp/kokoro.json /root/.kokoro-xray/config.json
+sudo kokoro-xray apply
+sudo kokoro-xray link --json tls | jq .
+```
+
+REALITY XHTTP:
+
+```bash
+sudo kokoro-xray reality scan --apply
+sudo jq '.inbound.mode = "reality"' /root/.kokoro-xray/config.json > /tmp/kokoro.json
+sudo mv /tmp/kokoro.json /root/.kokoro-xray/config.json
+sudo kokoro-xray apply
+sudo kokoro-xray link
+```
 
 ## Commands
 

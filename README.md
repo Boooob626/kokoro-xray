@@ -43,12 +43,6 @@ curl -fsSL https://raw.githubusercontent.com/Boooob626/kokoro-xray/testing/insta
 
 During edge setup, choose `reality`, `tls`, or `both` for the VLESS inbound mode. HY2 is enabled by default as a separate UDP acceleration option; press Enter at `Enable HY2 UDP acceleration? [Y/n]`, keep port `443` unless you need a custom UDP port, and set the HY2 SNI to your domain.
 
-The installer first tries a prebuilt runtime asset from the latest GitHub release. The `testing` branch publishes amd64 and arm64 runtime assets automatically when the branch is pushed. Those assets bundle the repo plus Xray, `geoip.dat`, and `geosite.dat` so VPS setup avoids a second Xray download. Branch installs clone fresh branch code first, then hydrate only the bundled runtime files when an asset is available. If no asset exists, the installer falls back to the normal Xray download path. Disable the fast path with:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Boooob626/kokoro-xray/main/install.sh | sudo env KOKORO_USE_PREBUILT=0 bash
-```
-
 Install and immediately start exit setup:
 
 ```bash
@@ -200,7 +194,6 @@ The scanner checks DNS, TLS 1.3, ALPN `h2`, certificate coverage, and redirect b
 ## Notes
 
 - Xray downloads are verified with upstream SHA256 digest files.
-- Prebuilt runtime assets are optional; missing assets fall back to source install and verified Xray download.
 - TLS-only Caddy installs use the official release binary with checksum verification; `both` mode builds Caddy with caddy-l4 only when needed.
 - If distro Go is too old, Caddy builds use a managed Go toolchain under `/usr/local/kokoro-go`.
 - UFW defaults to deny incoming and allow outgoing when firewall support is enabled.

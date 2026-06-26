@@ -6,7 +6,7 @@ The scripts keep state in JSON, render configs with `jq`, validate before reload
 
 ## Supported Modes
 
-- Edge single-node: VLESS XHTTP REALITY, TLS, or both
+- Edge single-node: VLESS XHTTP TLS by default, REALITY or both when selected
 - Optional HY2/Hysteria2 UDP edge on the same node
 - Edge + exit: edge forwards traffic to an exit over WireGuard
 - TLS edge: Caddy handles ACME and HTTPS routing
@@ -35,7 +35,7 @@ Install and immediately start edge setup:
 curl -fsSL https://raw.githubusercontent.com/Boooob626/kokoro-xray/main/install.sh | sudo bash -s -- --edge
 ```
 
-During edge setup, choose `reality`, `tls`, or `both` for the VLESS inbound mode. HY2 is enabled by default as a separate UDP acceleration option; press Enter at `Enable HY2 UDP acceleration? [Y/n]`, keep port `443` unless you need a custom UDP port, and set the HY2 SNI to your domain.
+During edge setup, press Enter for `tls` unless you need `reality` or `both`. HY2 is enabled by default as a separate UDP acceleration option; keep port `443` unless you need a custom UDP port, and set the HY2 SNI to your domain.
 
 Install and immediately start exit setup:
 
@@ -130,7 +130,7 @@ Use `--host auto6` when HY2 should connect to the VPS IPv6 address while the SNI
 ## Notes
 
 - Xray downloads are verified with upstream SHA256 digest files.
-- TLS-only Caddy installs use the official release binary with checksum verification; `both` mode builds Caddy with caddy-l4 only when needed.
+- Default TLS mode uses the official Caddy release binary with checksum verification; `both` mode builds Caddy with caddy-l4 only when selected.
 - If distro Go is too old, Caddy builds use a managed Go toolchain under `/usr/local/kokoro-go`.
 - UFW defaults to deny incoming and allow outgoing when firewall support is enabled.
 

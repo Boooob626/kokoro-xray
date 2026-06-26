@@ -11,8 +11,8 @@ kokoro_onboard_edge() {
         return 0
     fi
 
-    read -r -p "Inbound mode [reality/tls/both] (both): " mode
-    mode="${mode:-both}"
+    read -r -p "Inbound mode [reality/tls/both] (tls): " mode
+    mode="${mode:-tls}"
     kokoro_cfg_set_str '.inbound.mode' "$mode"
 
     if [[ "$mode" == "tls" || "$mode" == "both" ]]; then

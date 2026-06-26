@@ -107,6 +107,3 @@ kokoro_need_root() {
 kokoro_need_cmd() {
     command -v "$1" >/dev/null 2>&1 || kokoro_die "missing command: $1"
 }
-
-# Backward compat shim (removed in v0.2)
-kokoro_project_root() { printf '%s\n' "${KOKORO_ROOT}"; }

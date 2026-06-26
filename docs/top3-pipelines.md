@@ -167,3 +167,28 @@ sudo kokoro-xray link
 Do not add gRPC/WebSocket/HTTPUpgrade just because Xray supports them. They add
 more code, more client branches, and more Caddy surface. Add one only when a
 specific client or CDN requires that transport and the current top-3 paths fail.
+
+## Legacy comparison: zxcvos/Xray-script
+
+`zxcvos/Xray-script` is useful as a broad legacy feature map. It includes
+Vision+REALITY, XHTTP+REALITY, Trojan+XHTTP+REALITY, mKCP+seed, fallback/SNI
+split, Nginx UDS routing, Cloudflare WARP via Docker, and Xray API traffic
+stats.
+
+What Kokoro should learn:
+
+- Traffic stats are useful, but only add Xray API/stats when users need quota
+  accounting. It adds an API inbound and more policy fields.
+- Vision fallback to XHTTP is a valid legacy TCP design, but Kokoro already has
+  `both` mode with Caddy layer4 SNI split and XHTTP. Do not add Nginx UDS unless
+  Caddy cannot cover a required SNI split.
+- mKCP+seed is a niche bad-network latency fallback. Keep it out of the default
+  top 3; HY2 is the better UDP path for this repo.
+- WARP routing is useful for IP reputation or regional egress, but Docker/WARP is
+  too heavy for the edge default. Prefer Kokoro's existing edge-to-exit
+  WireGuard path first.
+- Trojan+XHTTP+REALITY helps clients that do not support VLESS well. Add it only
+  for a concrete client compatibility failure.
+
+Do not import its full Nginx/Cloudreve/WARP stack into Kokoro. That repo is a
+feature kitchen sink; Kokoro should stay a small Xray edge manager.

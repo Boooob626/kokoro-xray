@@ -90,7 +90,7 @@ while true; do
     case "$choice" in
         1) bash "${KOKORO_ROOT}/roles/edge.sh" --keep-secrets --apply-edge ;;
         2) bash "${KOKORO_ROOT}/roles/exit.sh" --keep-secrets ;;
-        3) source "${KOKORO_ROOT}/lib/link.sh"; kokoro_link_show --qr ;;
+        3) source "${KOKORO_ROOT}/lib/link.sh"; kokoro_link_show ;;
         4) source "${KOKORO_ROOT}/lib/apply.sh"; kokoro_apply ;;
         5) bash "${KOKORO_ROOT}/roles/pair.sh" ;;
         6)

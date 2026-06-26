@@ -77,8 +77,3 @@ kokoro_render() {
             ;;
     esac
 }
-
-# Legacy aliases for roles still sourcing this file
-kokoro_build_edge_xray() { kokoro_render_xray; }
-kokoro_build_exit_xray() { kokoro_render_xray; }
-kokoro_build_edge_caddy() { kokoro_render_caddy; }

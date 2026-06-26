@@ -47,8 +47,6 @@ kokoro_ensure_state() {
     fi
 }
 
-kokoro_ensure_config() { kokoro_ensure_state; }
-
 kokoro_check_secret_perms() {
     local perms
     perms="$(stat -c '%a' "${KOKORO_SECRETS}" 2>/dev/null || echo '')"

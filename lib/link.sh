@@ -47,25 +47,50 @@ kokoro_link_hy2_sni() {
     printf '%s\n' "$sni"
 }
 
+kokoro_link_auto6_host() {
+    local ip6
+    ip6="$(ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk '{for (i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}')"
+    [[ -n "$ip6" ]] || ip6="$(hostname -I 2>/dev/null | tr ' ' '\n' | awk '/:/ && $0 !~ /^fe80:/ {print; exit}')"
+    [[ -n "$ip6" ]] || kokoro_die "cannot detect public IPv6; pass --host VPS_IPV6"
+    printf '%s\n' "$ip6"
+}
+
+kokoro_link_hy2_host() {
+    case "$1" in
+        auto6|ipv6|auto-ipv6) kokoro_link_auto6_host ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
+
+kokoro_link_url_host() {
+    case "$1" in
+        *:* ) printf '[%s]\n' "$1" ;;
+        * ) printf '%s\n' "$1" ;;
+    esac
+}
+
 kokoro_link_hy2_url() {
     kokoro_ensure_state
-    local host="${1:-}" auth port sni pin
+    local host="${1:-}" url_host auth port sni pin
     kokoro_link_hy2_enabled || return 0
     [[ -n "$host" ]] || host="YOUR_VPS_IP_OR_DOMAIN"
+    host="$(kokoro_link_hy2_host "$host")"
+    url_host="$(kokoro_link_url_host "$host")"
     auth="$(kokoro_sec '.inbound.hy2.auth')"
     port="$(kokoro_cfg '.inbound.hy2.port')"
     sni="$(kokoro_link_hy2_sni)"
     pin="$(kokoro_sec '.inbound.hy2.pinned_peer_cert_sha256')"
     [[ -n "$pin" && "$pin" != "null" ]] || pin="PIN_AFTER_APPLY"
     printf 'hysteria2://%s@%s:%s?sni=%s&pinSHA256=%s&alpn=h3#kokoro-hy2\n' \
-        "$auth" "$host" "$port" "$sni" "$pin"
+        "$auth" "$url_host" "$port" "$sni" "$pin"
 }
 
 kokoro_link_hy2_json() {
     kokoro_ensure_state
     local host="${1:-}" auth port sni pin
     kokoro_link_hy2_enabled || return 1
-    [[ -n "$host" ]] || kokoro_die "HY2 JSON export requires --host VPS_IP_OR_DOMAIN"
+    [[ -n "$host" ]] || kokoro_die "HY2 JSON export requires --host VPS_IP_OR_DOMAIN or --host auto6"
+    host="$(kokoro_link_hy2_host "$host")"
     auth="$(kokoro_sec '.inbound.hy2.auth')"
     port="$(kokoro_cfg '.inbound.hy2.port')"
     sni="$(kokoro_link_hy2_sni)"
@@ -405,9 +430,10 @@ Usage:
   kokoro-xray link --qr
   kokoro-xray link --json [tls]
   kokoro-xray link --json hy2 --host VPS_IP_OR_DOMAIN
+  kokoro-xray link --json hy2 --host auto6
 
 Options:
-  --host HOST     Public VPS IP or domain for generated client output
+  --host HOST     Public VPS IP/domain; use auto6 to detect this VPS IPv6
   --qr            Print terminal QR codes (requires qrencode)
   --json PROFILE  Print full Xray client JSON for tls or hy2
 EOF

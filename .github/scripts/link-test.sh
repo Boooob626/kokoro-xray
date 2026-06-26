@@ -44,6 +44,9 @@ hy2="$(kokoro_link_hy2_url "198.51.100.10" | tr -d '\n')"
 [[ "$hy2" == *"pinSHA256=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"* ]]
 [[ "$hy2" == *"alpn=h3"* ]]
 
+hy2_v6="$(kokoro_link_hy2_url "2001:db8::10" | tr -d '\n')"
+[[ "$hy2_v6" == *"@[2001:db8::10]:443"* ]]
+
 tls="$(kokoro_link_tls_url | tr -d '\n')"
 [[ "$tls" == vless://* ]]
 [[ "$tls" == *"security=tls"* ]]
@@ -109,6 +112,9 @@ printf '%s\n' "$hy2_json" | jq -e '.routing.domainStrategy == "AsIs"' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.routing.rules[0].ip | index("10.0.0.0/8")' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.routing.rules[0].ip | index("fc00::/7")' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '[.. | strings | select(test("^(geoip|geosite):"))] | length == 0' >/dev/null
+
+hy2_v6_json="$(kokoro_link_hy2_json "2001:db8::10")"
+printf '%s\n' "$hy2_v6_json" | jq -e '.outbounds[0].settings.address == "2001:db8::10"' >/dev/null
 
 cli_hy2_json="$(kokoro_link_show --json hy2 --host 198.51.100.10)"
 printf '%s\n' "$cli_hy2_json" | jq -e '.outbounds[0].tag == "kokoro-hy2"' >/dev/null

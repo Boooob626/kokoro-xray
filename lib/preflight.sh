@@ -56,6 +56,8 @@ kokoro_preflight_edge() {
     if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
         cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
         [[ -n "$cdn" && "$cdn" != "null" ]] || kokoro_die "inbound.tls.cdn_domain required for tls/both mode"
+        jq -e '(.inbound.tls.ports // [443]) | type == "array" and length > 0 and all(.[]; type == "number" and . >= 1 and . <= 65535)' "${KOKORO_CONFIG}" >/dev/null \
+            || kokoro_die "invalid inbound.tls.ports; use an array of port numbers 1-65535"
     fi
 
     hy2_enabled="$(kokoro_cfg '.inbound.hy2.enabled // false')"

@@ -66,8 +66,21 @@ printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.domain[]? == "re
 printf '%s\n' "$tls_json" | jq -e '.routing.rules | map(select(.ip[]? == "geoip:cn")) | length > 0' >/dev/null
 printf '%s\n' "$tls_json" | jq -e '.routing.rules[-1].outboundTag == "kokoro-tls"' >/dev/null
 
+tmp_cfg="$(mktemp)"
+jq '.inbound.tls.ports = [443, 8443]' "${KOKORO_CONFIG}" >"$tmp_cfg"
+mv "$tmp_cfg" "${KOKORO_CONFIG}"
+tls_jump="$(kokoro_link_tls_url | tr '\n' ' ')"
+[[ "$tls_jump" == *"@cdn.example.com:443?"* ]]
+[[ "$tls_jump" == *"@cdn.example.com:8443?"* ]]
+tls_jump_json="$(kokoro_link_tls_json)"
+printf '%s\n' "$tls_jump_json" | jq -e '.outbounds | map(.tag) | index("kokoro-tls-443")' >/dev/null
+printf '%s\n' "$tls_jump_json" | jq -e '.outbounds | map(.tag) | index("kokoro-tls-8443")' >/dev/null
+printf '%s\n' "$tls_jump_json" | jq -e '.routing.balancers[0].tag == "kokoro-tls-jump"' >/dev/null
+printf '%s\n' "$tls_jump_json" | jq -e '.routing.balancers[0].strategy.type == "random"' >/dev/null
+printf '%s\n' "$tls_jump_json" | jq -e '.routing.rules[-1].balancerTag == "kokoro-tls-jump"' >/dev/null
+
 cli_tls_json="$(kokoro_link_show --json tls)"
-printf '%s\n' "$cli_tls_json" | jq -e '.outbounds[0].tag == "kokoro-tls"' >/dev/null
+printf '%s\n' "$cli_tls_json" | jq -e '.routing.balancers[0].tag == "kokoro-tls-jump"' >/dev/null
 
 hy2_json="$(kokoro_link_hy2_json "198.51.100.10")"
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].tag == "kokoro-hy2"' >/dev/null

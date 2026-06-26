@@ -98,15 +98,18 @@ kokoro_firewall_ufw_allow() {
 }
 
 kokoro_firewall_warn_only() {
-    local role mode port
+    local role mode port ports
     role="$(kokoro_cfg '.role')"
     mode="$(kokoro_cfg '.inbound.mode')"
     port="$(kokoro_cfg '.multinode.exit_port')"
+    ports="$(jq -r '(.inbound.tls.ports // [443]) | map(tostring + "/tcp") | join(", ")' "${KOKORO_CONFIG}")"
 
     case "$role" in
         edge)
-            if [[ "$mode" == "tls" || "$mode" == "both" || "$mode" == "reality" ]]; then
-                kokoro_warn "firewall disabled — ensure: 443/tcp, 80/tcp"
+            if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+                kokoro_warn "firewall disabled — ensure: ${ports}, 80/tcp"
+            elif [[ "$mode" == "reality" ]]; then
+                kokoro_warn "firewall disabled — ensure: 443/tcp"
             fi
             if [[ "$(kokoro_cfg '.inbound.hy2.enabled // false')" == "true" ]]; then
                 kokoro_warn "firewall disabled — ensure: $(kokoro_cfg '.inbound.hy2.port')/udp"
@@ -119,16 +122,20 @@ kokoro_firewall_warn_only() {
 }
 
 kokoro_firewall_service_rules() {
-    local role mode wg_port
+    local role mode wg_port tls_port
     role="$(kokoro_cfg '.role')"
     mode="$(kokoro_cfg '.inbound.mode')"
     wg_port="$(kokoro_cfg '.multinode.exit_port')"
 
     case "$role" in
         edge)
-            if [[ "$mode" == "tls" || "$mode" == "both" || "$mode" == "reality" ]]; then
-                kokoro_firewall_ufw_allow "443/tcp" "kokoro-xray"
+            if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+                while IFS= read -r tls_port; do
+                    [[ -n "$tls_port" ]] && kokoro_firewall_ufw_allow "${tls_port}/tcp" "kokoro-xray"
+                done < <(jq -r '(.inbound.tls.ports // [443])[]' "${KOKORO_CONFIG}")
                 kokoro_firewall_ufw_allow "80/tcp" "kokoro-acme"
+            elif [[ "$mode" == "reality" ]]; then
+                kokoro_firewall_ufw_allow "443/tcp" "kokoro-xray"
             fi
             if [[ "$(kokoro_cfg '.inbound.hy2.enabled // false')" == "true" ]]; then
                 kokoro_firewall_ufw_allow "$(kokoro_cfg '.inbound.hy2.port')/udp" "kokoro-hy2"

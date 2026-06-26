@@ -20,6 +20,7 @@ kokoro_onboard_edge() {
         [[ -n "$cdn" ]] && kokoro_cfg_set_str '.inbound.tls.cdn_domain' "$cdn"
         read -r -p "ACME email: " email
         [[ -n "$email" ]] && kokoro_cfg_set_str '.inbound.tls.acme_email' "$email"
+        kokoro_onboard_tls_ports
         kokoro_warn "Cloudflare: use Full (Strict) SSL; DNS-only during first cert if HTTP-01 fails"
     fi
 
@@ -66,6 +67,24 @@ kokoro_onboard_edge() {
 
     kokoro_cfg_set '.tor.enabled' 'false'
     kokoro_onboard_firewall
+}
+
+kokoro_onboard_tls_ports() {
+    local extra json_arr port
+
+    read -r -p "Extra TLS TCP ports for jump (comma, blank none): " extra
+    json_arr="443"
+    while IFS= read -r port; do
+        port="${port//[[:space:]]/}"
+        [[ -n "$port" ]] || continue
+        if [[ "$port" =~ ^[0-9]+$ && "$port" -ge 1 && "$port" -le 65535 ]]; then
+            [[ "$port" == "443" ]] || json_arr="${json_arr},${port}"
+        else
+            kokoro_warn "skip invalid TLS port: $port"
+        fi
+    done < <(printf '%s' "$extra" | tr ',' '\n')
+
+    kokoro_cfg_set '.inbound.tls.ports' "[${json_arr}]"
 }
 
 kokoro_onboard_hy2() {

@@ -104,6 +104,15 @@ Standard share links:
 kokoro-xray link
 ```
 
+TLS multi-port jump keeps `443` and adds extra TCP ports for the same TLS/XHTTP service. Open those ports in the VPS security group too:
+
+```bash
+jq '.inbound.tls.ports = [443, 8443, 2053, 2083]' ~/.kokoro-xray/config.json > /tmp/kokoro.json
+mv /tmp/kokoro.json ~/.kokoro-xray/config.json
+sudo kokoro-xray apply
+kokoro-xray link --json tls
+```
+
 TLS XHTTP JSON export for clients that support full JSON import:
 
 ```bash

@@ -65,6 +65,14 @@ grep -q 'layer4' "${OUT}/Caddyfile"
 grep -q 'listener_wrappers' "${OUT}/Caddyfile"
 grep -q 'proxy tcp/127.0.0.1:8443' "${OUT}/Caddyfile"
 
+jq '.inbound.tls.ports = [443, 8443]' "${FIX}/edge-config.json" >"${OUT}/edge-ports-config.json"
+jq -n -r -f "${ROOT}/lib/caddy.jq" \
+    --slurpfile cfg "${OUT}/edge-ports-config.json" \
+    --slurpfile sec "${FIX}/edge-secrets.json" \
+    >"${OUT}/Caddyfile-ports"
+grep -q '^cdn.example.com {' "${OUT}/Caddyfile-ports"
+grep -q '^cdn.example.com:8443 {' "${OUT}/Caddyfile-ports"
+
 echo "== exit xray =="
 jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile cfg "${FIX}/exit-config.json" \

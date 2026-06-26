@@ -11,7 +11,8 @@
     "tls": {
       "domain": "",
       "cdn_domain": "",
-      "acme_email": ""
+      "acme_email": "",
+      "ports": [443]
     },
     "hy2": {
       "enabled": false,

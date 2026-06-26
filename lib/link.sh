@@ -6,15 +6,18 @@ source "${KOKORO_ROOT}/lib/common.sh"
 
 kokoro_link_tls_url() {
     kokoro_ensure_state
-    local uuid path mode cdn
+    local uuid path mode cdn port
     mode="$(kokoro_cfg '.inbound.mode')"
     [[ "$mode" == "tls" || "$mode" == "both" ]] || return 0
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
     [[ -n "$cdn" && "$cdn" != "null" ]] || return 0
-    printf 'vless://%s@%s:443?encryption=none&security=tls&type=xhttp&path=%s&host=%s&sni=%s&fp=chrome&alpn=h2#kokoro-tls\n' \
-        "$uuid" "$cdn" "$path" "$cdn" "$cdn"
+    while IFS= read -r port; do
+        [[ -n "$port" ]] || continue
+        printf 'vless://%s@%s:%s?encryption=none&security=tls&type=xhttp&path=%s&host=%s&sni=%s&fp=chrome&alpn=h2#kokoro-tls-%s\n' \
+            "$uuid" "$cdn" "$port" "$path" "$cdn" "$cdn" "$port"
+    done < <(jq -r '(.inbound.tls.ports // [443])[]' "${KOKORO_CONFIG}")
 }
 
 kokoro_link_reality_url() {
@@ -153,19 +156,73 @@ kokoro_link_hy2_json() {
 
 kokoro_link_tls_json() {
     kokoro_ensure_state
-    local uuid path mode cdn
+    local uuid path mode cdn ports_json
     mode="$(kokoro_cfg '.inbound.mode')"
     [[ "$mode" == "tls" || "$mode" == "both" ]] || return 1
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
     [[ -n "$cdn" && "$cdn" != "null" ]] || return 1
+    ports_json="$(jq -c '[(.inbound.tls.ports // [443])[] | tonumber] | unique' "${KOKORO_CONFIG}")"
 
     jq -n \
         --arg uuid "$uuid" \
         --arg path "$path" \
         --arg cdn "$cdn" \
-        '{
+        --argjson ports "$ports_json" \
+        '
+        def tls_tag($port): if ($ports | length) == 1 then "kokoro-tls" else "kokoro-tls-\($port)" end;
+        def tls_route: if ($ports | length) == 1 then { outboundTag: "kokoro-tls" } else { balancerTag: "kokoro-tls-jump" } end;
+        def tls_balancers: if ($ports | length) == 1 then [] else [{ tag: "kokoro-tls-jump", selector: ["kokoro-tls-"], strategy: { type: "random" } }] end;
+        def tls_outbound($port): {
+          tag: tls_tag($port),
+          protocol: "vless",
+          settings: {
+            vnext: [
+              {
+                address: $cdn,
+                port: $port,
+                users: [
+                  {
+                    id: $uuid,
+                    encryption: "none",
+                    flow: ""
+                  }
+                ]
+              }
+            ]
+          },
+          streamSettings: {
+            network: "xhttp",
+            security: "tls",
+            tlsSettings: {
+              serverName: $cdn,
+              fingerprint: "chrome",
+              alpn: ["h2"]
+            },
+            xhttpSettings: {
+              path: $path,
+              host: $cdn,
+              mode: "auto",
+              xmux: {
+                maxConcurrency: "1-1",
+                hMaxRequestTimes: "600-900",
+                hMaxReusableSecs: "1800-3000"
+              },
+              xPaddingKey: "v",
+              xPaddingBytes: "16-96",
+              xPaddingHeader: "Referer",
+              xPaddingMethod: "tokenish",
+              uplinkHTTPMethod: "POST",
+              xPaddingObfsMode: true,
+              xPaddingPlacement: "queryInHeader",
+              scMaxEachPostBytes: 2000000,
+              uplinkDataPlacement: "body",
+              scMinPostsIntervalMs: 10
+            }
+          }
+        };
+        {
           log: { loglevel: "warning" },
           dns: {
             servers: [
@@ -191,55 +248,7 @@ kokoro_link_tls_json() {
               protocol: "http"
             }
           ],
-          outbounds: [
-            {
-              tag: "kokoro-tls",
-              protocol: "vless",
-              settings: {
-                vnext: [
-                  {
-                    address: $cdn,
-                    port: 443,
-                    users: [
-                      {
-                        id: $uuid,
-                        encryption: "none",
-                        flow: ""
-                      }
-                    ]
-                  }
-                ]
-              },
-              streamSettings: {
-                network: "xhttp",
-                security: "tls",
-                tlsSettings: {
-                  serverName: $cdn,
-                  fingerprint: "chrome",
-                  alpn: ["h2"]
-                },
-                xhttpSettings: {
-                  path: $path,
-                  host: $cdn,
-                  mode: "auto",
-                  xmux: {
-                    maxConcurrency: "1-1",
-                    hMaxRequestTimes: "600-900",
-                    hMaxReusableSecs: "1800-3000"
-                  },
-                  xPaddingKey: "v",
-                  xPaddingBytes: "16-96",
-                  xPaddingHeader: "Referer",
-                  xPaddingMethod: "tokenish",
-                  uplinkHTTPMethod: "POST",
-                  xPaddingObfsMode: true,
-                  xPaddingPlacement: "queryInHeader",
-                  scMaxEachPostBytes: 2000000,
-                  uplinkDataPlacement: "body",
-                  scMinPostsIntervalMs: 10
-                }
-              }
-            },
+          outbounds: ($ports | map(tls_outbound(.))) + [
             { tag: "DIRECT", protocol: "freedom" },
             { tag: "BLOCK", protocol: "blackhole" }
           ],
@@ -284,9 +293,8 @@ kokoro_link_tls_json() {
                   "domain:googleapis-cn.com",
                   "domain:gstatic.cn",
                   "domain:gstatic-cn.com"
-                ],
-                outboundTag: "kokoro-tls"
-              },
+                ]
+              } + tls_route,
               {
                 type: "field",
                 ip: ["geoip:private"],
@@ -325,10 +333,11 @@ kokoro_link_tls_json() {
               },
               {
                 type: "field",
-                network: "tcp,udp",
-                outboundTag: "kokoro-tls"
+                network: "tcp,udp"
               }
-            ]
+              + tls_route
+            ],
+            balancers: tls_balancers
           }
         }'
 }

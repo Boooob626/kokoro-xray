@@ -40,6 +40,7 @@ kokoro_migrate_merge_defaults() {
       | .inbound.hy2.port = (.inbound.hy2.port // $d.inbound.hy2.port)
       | .inbound.hy2.sni = (if (.inbound.hy2.sni // "") == "" then $d.inbound.hy2.sni else .inbound.hy2.sni end)
       | .inbound.hy2.masquerade = (if (.inbound.hy2.masquerade // "") == "" then $d.inbound.hy2.masquerade else .inbound.hy2.masquerade end)
+      | .inbound.tls.ports = (.inbound.tls.ports // $d.inbound.tls.ports)
       | .caddy.version = (if (.caddy.version // "") == "" then $d.caddy.version else .caddy.version end)
       | .caddy.use_l4 = (.caddy.use_l4 // $d.caddy.use_l4)
       | .firewall.enabled = (.firewall.enabled // $d.firewall.enabled)

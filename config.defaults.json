@@ -32,7 +32,6 @@
     "local_wg_ip": "10.66.0.2",
     "peer_wg_ip": "10.66.0.1"
   },
-  "routing": {},
   "firewall": {
     "enabled": true,
     "ssh_port": 0,

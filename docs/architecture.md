@@ -9,7 +9,7 @@
 
 | File | Mode | Contents |
 |------|------|----------|
-| `~/.kokoro-xray/config.json` | 644 | role, mode, domains, routing preset |
+| `~/.kokoro-xray/config.json` | 644 | role, mode, domains |
 | `~/.kokoro-xray/secrets.json` | 600 | uuid, keys, wg private keys |
 | `~/.kokoro-xray/last-good/` | 700 | rollback snapshots |
 

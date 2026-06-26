@@ -8,7 +8,7 @@ kokoro_link_tls_url() {
     kokoro_ensure_state
     local uuid path mode cdn port
     mode="$(kokoro_cfg '.inbound.mode')"
-    [[ "$mode" == "tls" || "$mode" == "both" ]] || return 0
+    [[ "$mode" == "tls" ]] || return 0
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
@@ -24,7 +24,7 @@ kokoro_link_reality_url() {
     kokoro_ensure_state
     local host="${1:-}" uuid path sni pub sid mode
     mode="$(kokoro_cfg '.inbound.mode')"
-    [[ "$mode" == "reality" || "$mode" == "both" ]] || return 0
+    [[ "$mode" == "reality" ]] || return 0
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     sni="$(kokoro_cfg '.inbound.reality.server_names[0]')"
@@ -193,7 +193,7 @@ kokoro_link_tls_json() {
     kokoro_ensure_state
     local uuid path mode cdn ports_json
     mode="$(kokoro_cfg '.inbound.mode')"
-    [[ "$mode" == "tls" || "$mode" == "both" ]] || return 1
+    [[ "$mode" == "tls" ]] || return 1
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"

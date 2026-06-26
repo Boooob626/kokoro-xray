@@ -22,7 +22,7 @@ kokoro_health() {
     if [[ "$role" == "edge" ]]; then
         local mode
         mode="$(kokoro_cfg '.inbound.mode')"
-        if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+        if [[ "$mode" == "tls" ]]; then
             echo "caddy:    $(systemctl is-active caddy 2>/dev/null || echo unknown)"
         fi
         if [[ "$mode" == "tls" ]]; then

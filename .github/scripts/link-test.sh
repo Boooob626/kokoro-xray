@@ -27,6 +27,10 @@ HOME="$tmp_home" KOKORO_ROOT="$ROOT" bash <<'SCRIPT'
 set -euo pipefail
 source "${KOKORO_ROOT}/lib/link.sh"
 
+tmp_cfg="$(mktemp)"
+jq '.inbound.mode = "reality"' "${KOKORO_CONFIG}" >"$tmp_cfg"
+mv "$tmp_cfg" "${KOKORO_CONFIG}"
+
 expected_pbk="$(kokoro_sec '.inbound.reality.public_key')"
 reality="$(kokoro_link_reality_url | tr -d '\n')"
 [[ "$reality" == vless://* ]]
@@ -36,6 +40,10 @@ reality="$(kokoro_link_reality_url | tr -d '\n')"
 
 reality_host="$(kokoro_link_reality_url "198.51.100.10" | tr -d '\n')"
 [[ "$reality_host" == vless://*"@198.51.100.10:443?"* ]]
+
+tmp_cfg="$(mktemp)"
+jq '.inbound.mode = "tls"' "${KOKORO_CONFIG}" >"$tmp_cfg"
+mv "$tmp_cfg" "${KOKORO_CONFIG}"
 
 hy2="$(kokoro_link_hy2_url "198.51.100.10" | tr -d '\n')"
 [[ "$hy2" == hysteria2://* ]]

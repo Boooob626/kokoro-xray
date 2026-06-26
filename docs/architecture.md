@@ -25,8 +25,6 @@ preflight.sh → render.jq + caddy.jq → validate.sh → firewall.sh → reload
 |------|---------|---------|------------|
 | `reality` | Xray `0.0.0.0:443` | — | Xray |
 | `tls` | — | Caddy L7 | Caddy |
-| `both` | Xray `127.0.0.1:8443` | Caddy L4 SNI split | Caddy (xcaddy + caddy-l4) |
-
 HY2 is optional and independent of `inbound.mode`. When `inbound.hy2.enabled=true`, Xray also renders `HY2_IN` on `inbound.hy2.port` UDP, default `443`. It uses Xray's Hysteria2 inbound (`protocol: hysteria`, `version: 2`) and Hysteria transport (`network: hysteria`) with TLS ALPN `h3`.
 
 Kokoro does not reuse Caddy's ACME private storage for HY2. During render/apply, it creates a local certificate at `paths.hy2_cert` and `paths.hy2_key`, computes its SHA-256 pin, and stores that pin in `secrets.json` for client export.

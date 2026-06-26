@@ -106,7 +106,7 @@ kokoro_firewall_warn_only() {
 
     case "$role" in
         edge)
-            if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+            if [[ "$mode" == "tls" ]]; then
                 kokoro_warn "firewall disabled — ensure: ${ports}, 80/tcp"
             elif [[ "$mode" == "reality" ]]; then
                 kokoro_warn "firewall disabled — ensure: 443/tcp"
@@ -129,7 +129,7 @@ kokoro_firewall_service_rules() {
 
     case "$role" in
         edge)
-            if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+            if [[ "$mode" == "tls" ]]; then
                 while IFS= read -r tls_port; do
                     [[ -n "$tls_port" ]] && kokoro_firewall_ufw_allow "${tls_port}/tcp" "kokoro-xray"
                 done < <(jq -r '(.inbound.tls.ports // [443])[]' "${KOKORO_CONFIG}")

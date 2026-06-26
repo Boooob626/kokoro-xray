@@ -11,11 +11,11 @@ kokoro_onboard_edge() {
         return 0
     fi
 
-    read -r -p "Inbound mode [reality/tls/both] (tls): " mode
+    read -r -p "Inbound mode [reality/tls] (tls): " mode
     mode="${mode:-tls}"
     kokoro_cfg_set_str '.inbound.mode' "$mode"
 
-    if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+    if [[ "$mode" == "tls" ]]; then
         read -r -p "CDN domain (e.g. cdn.example.com): " cdn
         [[ -n "$cdn" ]] && kokoro_cfg_set_str '.inbound.tls.cdn_domain' "$cdn"
         read -r -p "ACME email: " email
@@ -26,7 +26,7 @@ kokoro_onboard_edge() {
 
     kokoro_onboard_hy2 "$cdn"
 
-    if [[ "$mode" == "reality" || "$mode" == "both" ]]; then
+    if [[ "$mode" == "reality" ]]; then
         local do_scan=false scan_args=()
         if [[ "${KOKORO_APPLY_EDGE:-}" == "true" ]]; then
             do_scan=true

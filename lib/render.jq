@@ -200,8 +200,8 @@ def edge_multinode_routing: {
 def edge_routing: if cfg.multinode.enabled then edge_multinode_routing else edge_single_routing end;
 
 def edge_inbounds:
-  (if mode == "reality" or mode == "both" then [reality_inbound] else [] end)
-  + (if mode == "tls" or mode == "both" then [tls_inbound] else [] end)
+  (if mode == "reality" then [reality_inbound] else [] end)
+  + (if mode == "tls" then [tls_inbound] else [] end)
   + (if hy2_enabled then [hy2_inbound] else [] end);
 
 def edge_config: log_block + {

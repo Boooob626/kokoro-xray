@@ -41,21 +41,21 @@ kokoro_preflight_paths() {
 kokoro_preflight_edge() {
     local mode="$1" cdn hy2_enabled hy2_port
     case "$mode" in
-        reality|tls|both) ;;
+        reality|tls) ;;
         *) kokoro_die "invalid inbound.mode: $mode" ;;
     esac
 
     [[ -n "$(kokoro_sec '.inbound.uuid')" ]] || kokoro_die "missing inbound.uuid in secrets.json"
     [[ -n "$(kokoro_sec '.inbound.xhttp_path')" ]] || kokoro_die "missing inbound.xhttp_path in secrets.json"
 
-    if [[ "$mode" == "reality" || "$mode" == "both" ]]; then
+    if [[ "$mode" == "reality" ]]; then
         [[ -n "$(kokoro_sec '.inbound.reality.private_key')" ]] || kokoro_die "missing reality private key"
         [[ -n "$(kokoro_sec '.inbound.reality.short_ids[0]')" ]] || kokoro_die "missing reality short_id"
     fi
 
-    if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+    if [[ "$mode" == "tls" ]]; then
         cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
-        [[ -n "$cdn" && "$cdn" != "null" ]] || kokoro_die "inbound.tls.cdn_domain required for tls/both mode"
+        [[ -n "$cdn" && "$cdn" != "null" ]] || kokoro_die "inbound.tls.cdn_domain required for tls mode"
         jq -e '(.inbound.tls.ports // [443]) | type == "array" and length > 0 and all(.[]; type == "number" and . >= 1 and . <= 65535)' "${KOKORO_CONFIG}" >/dev/null \
             || kokoro_die "invalid inbound.tls.ports; use an array of port numbers 1-65535"
     fi

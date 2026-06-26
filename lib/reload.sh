@@ -11,7 +11,7 @@ kokoro_reload() {
 
     systemctl restart xray
 
-    if [[ "$role" == "edge" && ( "$mode" == "tls" || "$mode" == "both" ) ]]; then
+    if [[ "$role" == "edge" && "$mode" == "tls" ]]; then
         systemctl enable caddy >/dev/null 2>&1 || true
         systemctl restart caddy
     fi

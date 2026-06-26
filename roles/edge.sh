@@ -35,7 +35,7 @@ kokoro_edge_install() {
     kokoro_xray_install
 
     mode="$(kokoro_cfg '.inbound.mode')"
-    if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
+    if [[ "$mode" == "tls" ]]; then
         kokoro_caddy_install
     fi
 

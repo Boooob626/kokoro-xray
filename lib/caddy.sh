@@ -1,14 +1,8 @@
 #!/usr/bin/env bash
-# kokoro-xray — Caddy with caddy-l4 via xcaddy
+# kokoro-xray — official Caddy release install
 
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 source "${KOKORO_ROOT}/lib/os.sh"
-
-KOKORO_XCADDY_VERSION="${KOKORO_XCADDY_VERSION:-v0.4.6}"
-KOKORO_CADDY_L4_VERSION="${KOKORO_CADDY_L4_VERSION:-v0.1.1}"
-KOKORO_GO_MIN_VERSION="${KOKORO_GO_MIN_VERSION:-1.21.0}"
-KOKORO_GO_VERSION="${KOKORO_GO_VERSION:-1.24.4}"
-KOKORO_GO_PREFIX="${KOKORO_GO_PREFIX:-/usr/local/kokoro-go}"
 
 kokoro_caddy_version() {
     local version
@@ -20,73 +14,6 @@ kokoro_caddy_version() {
     esac
 }
 
-kokoro_caddy_needs_l4() {
-    [[ "$(kokoro_cfg '.inbound.mode')" == "both" ]]
-}
-
-kokoro_caddy_installed_matches() {
-    local dest="$1" version="$2" installed
-    [[ -x "$dest" ]] || return 1
-    installed="$("$dest" version 2>/dev/null | awk '{print $1}')"
-    [[ "$installed" == "$version" ]] || return 1
-    if kokoro_caddy_needs_l4; then
-        "$dest" list-modules 2>/dev/null | grep -q 'layer4' || return 1
-    fi
-    return 0
-}
-
-kokoro_run_with_timer() {
-    local label="$1" interval="${KOKORO_BUILD_TIMER_INTERVAL:-30}" pid elapsed status
-    shift
-
-    "$@" &
-    pid="$!"
-    elapsed=0
-
-    while kill -0 "$pid" 2>/dev/null; do
-        sleep "$interval"
-        if kill -0 "$pid" 2>/dev/null; then
-            elapsed=$((elapsed + interval))
-            kokoro_log "${label} still running... ${elapsed}s"
-        fi
-    done
-
-    if wait "$pid"; then
-        return 0
-    fi
-    status=$?
-    return "$status"
-}
-
-kokoro_version_ge() {
-    local have="$1" need="$2"
-    local hm hn hp nm nn np
-    IFS=. read -r hm hn hp <<<"$have"
-    IFS=. read -r nm nn np <<<"$need"
-    hp="${hp:-0}"; np="${np:-0}"
-    [[ "$hm" =~ ^[0-9]+$ && "$hn" =~ ^[0-9]+$ && "$hp" =~ ^[0-9]+$ ]] || return 1
-    [[ "$nm" =~ ^[0-9]+$ && "$nn" =~ ^[0-9]+$ && "$np" =~ ^[0-9]+$ ]] || return 1
-    (( hm > nm )) && return 0
-    (( hm < nm )) && return 1
-    (( hn > nn )) && return 0
-    (( hn < nn )) && return 1
-    (( hp >= np ))
-}
-
-kokoro_go_version() {
-    local go_bin="$1" raw
-    raw="$("$go_bin" version 2>/dev/null | awk '{print $3}' | sed 's/^go//; s/[^0-9.].*$//')"
-    [[ -n "$raw" ]] && printf '%s\n' "$raw"
-}
-
-kokoro_go_arch() {
-    case "$(uname -m)" in
-        x86_64 | amd64) echo "amd64" ;;
-        aarch64 | arm64) echo "arm64" ;;
-        *) kokoro_die "unsupported Go architecture: $(uname -m)" ;;
-    esac
-}
-
 kokoro_caddy_release_arch() {
     case "$(uname -m)" in
         x86_64 | amd64) echo "amd64" ;;
@@ -95,79 +22,15 @@ kokoro_caddy_release_arch() {
     esac
 }
 
-kokoro_caddy_install_official() {
-    local dest="$1" caddy_version="$2"
-    local plain_version arch asset base_url tmp expected
-
-    plain_version="${caddy_version#v}"
-    arch="$(kokoro_caddy_release_arch)"
-    asset="caddy_${plain_version}_linux_${arch}.tar.gz"
-    base_url="https://github.com/caddyserver/caddy/releases/download/${caddy_version}"
-    tmp="$(mktemp -d)"
-
-    if ! command -v curl >/dev/null 2>&1 || ! command -v tar >/dev/null 2>&1 || ! command -v sha512sum >/dev/null 2>&1; then
-        kokoro_pkg_install curl ca-certificates tar coreutils
-    fi
-    kokoro_log "downloading official Caddy ${caddy_version} (${arch})"
-    curl -fsSL "${base_url}/${asset}" -o "${tmp}/${asset}" || { rm -rf "$tmp"; return 1; }
-    curl -fsSL "${base_url}/caddy_${plain_version}_checksums.txt" -o "${tmp}/checksums.txt" || { rm -rf "$tmp"; return 1; }
-    expected="$(awk -v f="$asset" '$2 == f { print $1; exit }' "${tmp}/checksums.txt")"
-    [[ -n "$expected" ]] || { rm -rf "$tmp"; return 1; }
-    printf '%s  %s\n' "$expected" "${tmp}/${asset}" | sha512sum -c - >/dev/null || { rm -rf "$tmp"; return 1; }
-
-    tar -xzf "${tmp}/${asset}" -C "$tmp" caddy || { rm -rf "$tmp"; return 1; }
-    install -m 755 "${tmp}/caddy" "$dest"
-    rm -rf "$tmp"
-}
-
-kokoro_go_install_official() {
-    local arch url tmp prefix go_bin version
-    arch="$(kokoro_go_arch)"
-    prefix="${KOKORO_GO_PREFIX}/go${KOKORO_GO_VERSION}"
-    go_bin="${prefix}/bin/go"
-
-    if [[ -x "$go_bin" ]]; then
-        version="$(kokoro_go_version "$go_bin")"
-        if kokoro_version_ge "$version" "$KOKORO_GO_MIN_VERSION"; then
-            KOKORO_CADDY_GO_BIN="$go_bin"
-            return 0
-        fi
-    fi
-
-    kokoro_pkg_install curl git ca-certificates tar
-    url="https://go.dev/dl/go${KOKORO_GO_VERSION}.linux-${arch}.tar.gz"
-    tmp="$(mktemp -d)"
-
-    kokoro_log "installing Go ${KOKORO_GO_VERSION} for Caddy build"
-    curl -fsSL "$url" -o "${tmp}/go.tgz" || kokoro_die "failed to download Go ${KOKORO_GO_VERSION}"
-    rm -rf "$prefix"
-    install -d "$KOKORO_GO_PREFIX"
-    tar -C "$KOKORO_GO_PREFIX" -xzf "${tmp}/go.tgz" || kokoro_die "failed to extract Go ${KOKORO_GO_VERSION}"
-    mv "${KOKORO_GO_PREFIX}/go" "$prefix"
-    rm -rf "$tmp"
-    [[ -x "$go_bin" ]] || kokoro_die "Go install failed: $go_bin missing"
-    KOKORO_CADDY_GO_BIN="$go_bin"
-}
-
-kokoro_go_for_caddy() {
-    local go_bin version
-    if go_bin="$(command -v go 2>/dev/null)"; then
-        version="$(kokoro_go_version "$go_bin")"
-        if kokoro_version_ge "$version" "$KOKORO_GO_MIN_VERSION"; then
-            kokoro_log "using Go ${version} for Caddy build"
-            KOKORO_CADDY_GO_BIN="$go_bin"
-            return 0
-        fi
-        kokoro_warn "system Go ${version:-unknown} is too old; need >= ${KOKORO_GO_MIN_VERSION}"
-    fi
-
-    kokoro_go_install_official
-    version="$(kokoro_go_version "$KOKORO_CADDY_GO_BIN")"
-    kokoro_log "using Go ${version} for Caddy build"
+kokoro_caddy_installed_matches() {
+    local dest="$1" version="$2" installed
+    [[ -x "$dest" ]] || return 1
+    installed="$("$dest" version 2>/dev/null | awk '{print $1}')"
+    [[ "$installed" == "$version" ]]
 }
 
 kokoro_caddy_install() {
-    local dest caddy_version go_bin go_path
+    local dest caddy_version plain_version arch asset base_url tmp expected
     kokoro_need_root
     dest="$(kokoro_cfg '.paths.caddy_bin')"
     caddy_version="$(kokoro_caddy_version)"
@@ -178,41 +41,26 @@ kokoro_caddy_install() {
         return
     fi
 
-    if ! kokoro_caddy_needs_l4; then
-        if kokoro_caddy_install_official "$dest" "$caddy_version"; then
-            kokoro_log "caddy ${caddy_version} installed to ${dest}"
-            kokoro_caddy_install_service
-            return
-        fi
-        kokoro_warn "official Caddy download failed; falling back to local build"
+    plain_version="${caddy_version#v}"
+    arch="$(kokoro_caddy_release_arch)"
+    asset="caddy_${plain_version}_linux_${arch}.tar.gz"
+    base_url="https://github.com/caddyserver/caddy/releases/download/${caddy_version}"
+    tmp="$(mktemp -d)"
+
+    if ! command -v curl >/dev/null 2>&1 || ! command -v tar >/dev/null 2>&1 || ! command -v sha512sum >/dev/null 2>&1; then
+        kokoro_pkg_install curl ca-certificates tar coreutils
     fi
 
-    kokoro_pkg_install curl git ca-certificates tar
-    kokoro_go_for_caddy
-    go_bin="$KOKORO_CADDY_GO_BIN"
-    go_path="$(dirname "$go_bin"):${PATH}"
-    PATH="$go_path"
-    GOBIN=/usr/local/bin "$go_bin" install "github.com/caddyserver/xcaddy/cmd/xcaddy@${KOKORO_XCADDY_VERSION}" \
-        || kokoro_die "failed to install xcaddy ${KOKORO_XCADDY_VERSION}"
-    [[ -x /usr/local/bin/xcaddy ]] || kokoro_die "xcaddy not found after install"
+    kokoro_log "downloading official Caddy ${caddy_version} (${arch})"
+    curl -fsSL "${base_url}/${asset}" -o "${tmp}/${asset}" || { rm -rf "$tmp"; kokoro_die "failed to download Caddy ${caddy_version}"; }
+    curl -fsSL "${base_url}/caddy_${plain_version}_checksums.txt" -o "${tmp}/checksums.txt" || { rm -rf "$tmp"; kokoro_die "failed to download Caddy checksums"; }
+    expected="$(awk -v f="$asset" '$2 == f { print $1; exit }' "${tmp}/checksums.txt")"
+    [[ -n "$expected" ]] || { rm -rf "$tmp"; kokoro_die "Caddy checksum missing for ${asset}"; }
+    printf '%s  %s\n' "$expected" "${tmp}/${asset}" | sha512sum -c - >/dev/null || { rm -rf "$tmp"; kokoro_die "Caddy checksum failed"; }
 
-    if kokoro_caddy_needs_l4; then
-        kokoro_log "building Caddy ${caddy_version} with caddy-l4 ${KOKORO_CADDY_L4_VERSION}"
-        kokoro_log "this can take several minutes on small VPS instances"
-        kokoro_run_with_timer "caddy build" /usr/local/bin/xcaddy build "$caddy_version" --with "github.com/mholt/caddy-l4@${KOKORO_CADDY_L4_VERSION}" --output "$dest" \
-            || kokoro_die "failed to build Caddy ${caddy_version}"
-    else
-        kokoro_log "building Caddy ${caddy_version}"
-        kokoro_log "this can take several minutes on small VPS instances"
-        kokoro_run_with_timer "caddy build" /usr/local/bin/xcaddy build "$caddy_version" --output "$dest" \
-            || kokoro_die "failed to build Caddy ${caddy_version}"
-    fi
-
-    [[ -x "$dest" || -f "$dest" ]] || kokoro_die "caddy build did not create $dest"
-    chmod 755 "$dest"
-    if kokoro_caddy_needs_l4; then
-        "$dest" list-modules 2>/dev/null | grep -q 'layer4' || kokoro_die "caddy-l4 module missing after xcaddy build"
-    fi
+    tar -xzf "${tmp}/${asset}" -C "$tmp" caddy || { rm -rf "$tmp"; kokoro_die "failed to extract Caddy"; }
+    install -m 755 "${tmp}/caddy" "$dest"
+    rm -rf "$tmp"
     kokoro_log "caddy ${caddy_version} installed to ${dest}"
     kokoro_caddy_install_service
 }

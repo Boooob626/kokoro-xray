@@ -108,22 +108,5 @@ kokoro_need_cmd() {
     command -v "$1" >/dev/null 2>&1 || kokoro_die "missing command: $1"
 }
 
-kokoro_load_i18n() {
-    local lang file
-    lang="$(kokoro_cfg '.language')"
-    if [[ "$lang" == "auto" || -z "$lang" || "$lang" == "null" ]]; then
-        lang="${LANG%%_*}"
-        lang="${lang:-en}"
-    fi
-    file="${KOKORO_ROOT}/i18n/${lang}.json"
-    [[ -f "$file" ]] || file="${KOKORO_ROOT}/i18n/en.json"
-    [[ -f "$file" ]] || kokoro_die "i18n file not found"
-    KOKORO_I18N_FILE="$file"
-}
-
-kokoro_t() {
-    jq -r --arg k "$1" '.[$k] // $k' "${KOKORO_I18N_FILE}"
-}
-
 # Backward compat shim (removed in v0.2)
 kokoro_project_root() { printf '%s\n' "${KOKORO_ROOT}"; }

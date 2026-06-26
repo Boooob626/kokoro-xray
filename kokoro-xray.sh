@@ -8,23 +8,22 @@ export KOKORO_ROOT="$(cd -P -- "$(dirname -- "$SCRIPT_PATH")" && pwd -P)"
 source "${KOKORO_ROOT}/lib/common.sh"
 
 kokoro_ensure_state
-kokoro_load_i18n
 
 menu() {
-    echo -e "${CYAN}${BOLD}kokoro-xray${NC} $(kokoro_t menu_subtitle)"
+    echo -e "${CYAN}${BOLD}kokoro-xray${NC} minimal shell xray manager"
     echo ""
-    echo "  1) $(kokoro_t menu_edge)"
-    echo "  2) $(kokoro_t menu_exit)"
-    echo "  3) $(kokoro_t menu_link)"
-    echo "  4) $(kokoro_t menu_apply)"
-    echo "  5) $(kokoro_t menu_pair)"
-    echo "  6) $(kokoro_t menu_tor_on)"
-    echo "  7) $(kokoro_t menu_tor_off)"
-    echo "  8) $(kokoro_t menu_status)"
-    echo "  9) $(kokoro_t menu_validate)"
-    echo " 10) $(kokoro_t menu_reality_scan)"
-    echo " 11) $(kokoro_t menu_tune)"
-    echo "  q) $(kokoro_t menu_quit)"
+    echo "  1) Install / update edge node"
+    echo "  2) Install / update exit node"
+    echo "  3) Show share links"
+    echo "  4) Apply config (render + reload)"
+    echo "  5) Pair edge <-> exit (WG keys)"
+    echo "  6) Enable Tor on exit (.onion, multinode)"
+    echo "  7) Disable Tor on exit"
+    echo "  8) Show status"
+    echo "  9) Validate configs"
+    echo " 10) Scan REALITY targets"
+    echo " 11) Tune network (TFO + BBR)"
+    echo "  q) Quit"
     echo ""
 }
 
@@ -87,7 +86,7 @@ fi
 
 while true; do
     menu
-    read -r -p "$(kokoro_t menu_choice): " choice
+    read -r -p "Choice: " choice
     case "$choice" in
         1) bash "${KOKORO_ROOT}/roles/edge.sh" --keep-secrets --apply-edge ;;
         2) bash "${KOKORO_ROOT}/roles/exit.sh" --keep-secrets ;;
@@ -113,7 +112,7 @@ while true; do
         10) source "${KOKORO_ROOT}/lib/reality-scan.sh"; kokoro_reality_scan --limit 10 ;;
         11) source "${KOKORO_ROOT}/lib/network-tune.sh"; kokoro_need_root; kokoro_network_tune ;;
         q|Q) exit 0 ;;
-        *) kokoro_warn "$(kokoro_t invalid_choice)" ;;
+        *) kokoro_warn "invalid choice" ;;
     esac
     echo ""
 done

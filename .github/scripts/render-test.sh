@@ -34,6 +34,7 @@ jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile sec "${FIX}/edge-secrets.json" \
     >"${OUT}/edge-hy2-xray.json"
 jq -e '.inbounds | map(.tag) | index("HY2_IN")' "${OUT}/edge-hy2-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="HY2_IN") | .listen == "::"' "${OUT}/edge-hy2-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="HY2_IN") | .protocol == "hysteria"' "${OUT}/edge-hy2-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="HY2_IN") | .settings.version == 2' "${OUT}/edge-hy2-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="HY2_IN") | .streamSettings.network == "hysteria"' "${OUT}/edge-hy2-xray.json" >/dev/null

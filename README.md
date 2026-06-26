@@ -130,6 +130,7 @@ kokoro-xray link --json hy2 --host VPS_IP_OR_DOMAIN
 HY2 uses Xray's native Hysteria2 protocol over UDP with TLS ALPN `h3`. Kokoro generates a local HY2 certificate on `sudo kokoro-xray apply`, stores its SHA-256 pin in `~/.kokoro-xray/secrets.json`, and emits that pin in the HY2 client JSON.
 
 The HY2 client JSON is self-contained: it does not require `geoip.dat` or `geosite.dat`, and it uses `AsIs` routing so ordinary domain traffic is sent to HY2 without pre-resolving domains for routing.
+HY2 JSON prefers IPv6 with Xray `UseIPv6`; use a host/domain with an AAAA record and open the configured UDP port on IPv6.
 
 If you skipped HY2 during setup, enable it before apply:
 

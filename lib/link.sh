@@ -80,6 +80,13 @@ kokoro_link_hy2_json() {
         --argjson port "$port" \
         '{
           log: { loglevel: "warning" },
+          dns: {
+            queryStrategy: "UseIPv6",
+            servers: [
+              "https://cloudflare-dns.com/dns-query",
+              "https://dns.google/dns-query"
+            ]
+          },
           inbounds: [
             {
               tag: "socks-in",
@@ -117,6 +124,9 @@ kokoro_link_hy2_json() {
                   version: 2,
                   auth: $auth,
                   udpIdleTimeout: 60
+                },
+                sockopt: {
+                  domainStrategy: "UseIPv6"
                 }
               }
             },

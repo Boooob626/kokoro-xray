@@ -101,6 +101,8 @@ printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].settings.version == 2' >/dev/nu
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].settings.address == "198.51.100.10"' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].settings.port == 443' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.network == "hysteria"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.dns.queryStrategy == "UseIPv6"' >/dev/null
+printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.sockopt.domainStrategy == "UseIPv6"' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.tlsSettings.pinnedPeerCertSha256 == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.outbounds[0].streamSettings.hysteriaSettings.auth == "hy2-test-auth"' >/dev/null
 printf '%s\n' "$hy2_json" | jq -e '.routing.domainStrategy == "AsIs"' >/dev/null

@@ -87,7 +87,7 @@ def hy2_sni:
 
 def hy2_inbound: {
   tag: "HY2_IN",
-  listen: "0.0.0.0",
+  listen: "::",
   port: cfg.inbound.hy2.port,
   protocol: "hysteria",
   settings: {

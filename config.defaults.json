@@ -15,7 +15,7 @@
       "ports": [443]
     },
     "hy2": {
-      "enabled": false,
+      "enabled": true,
       "port": 443,
       "sni": "",
       "masquerade": "https://www.cloudflare.com/"

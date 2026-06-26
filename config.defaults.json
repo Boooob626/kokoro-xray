@@ -8,7 +8,6 @@
       "server_names": ["www.cloudflare.com"]
     },
     "tls": {
-      "domain": "",
       "cdn_domain": "",
       "acme_email": "",
       "ports": [443]

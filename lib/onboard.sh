@@ -116,7 +116,7 @@ kokoro_onboard_hy2() {
 
     fallback_sni="$cdn"
     [[ -n "$fallback_sni" ]] || fallback_sni="$(kokoro_cfg '.inbound.hy2.sni')"
-    [[ -n "$fallback_sni" && "$fallback_sni" != "null" ]] || fallback_sni="$(kokoro_cfg '.inbound.tls.domain')"
+    [[ -n "$fallback_sni" && "$fallback_sni" != "null" ]] || fallback_sni="$(kokoro_cfg '.inbound.tls.cdn_domain')"
     [[ -n "$fallback_sni" && "$fallback_sni" != "null" ]] || fallback_sni="kokoro-hy2.local"
     read -r -p "HY2 SNI [${fallback_sni}]: " sni
     sni="${sni:-$fallback_sni}"

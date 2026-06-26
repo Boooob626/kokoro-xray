@@ -82,7 +82,7 @@ def tls_inbound: {
 
 def hy2_sni:
   if (cfg.inbound.hy2.sni // "") != "" then cfg.inbound.hy2.sni
-  elif (cfg.inbound.tls.domain // "") != "" then cfg.inbound.tls.domain
+  elif (cfg.inbound.tls.cdn_domain // "") != "" then cfg.inbound.tls.cdn_domain
   else "kokoro-hy2.local" end;
 
 def hy2_inbound: {

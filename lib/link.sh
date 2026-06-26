@@ -42,7 +42,7 @@ kokoro_link_hy2_enabled() {
 kokoro_link_hy2_sni() {
     local sni
     sni="$(kokoro_cfg '.inbound.hy2.sni')"
-    [[ -n "$sni" && "$sni" != "null" ]] || sni="$(kokoro_cfg '.inbound.tls.domain')"
+    [[ -n "$sni" && "$sni" != "null" ]] || sni="$(kokoro_cfg '.inbound.tls.cdn_domain')"
     [[ -n "$sni" && "$sni" != "null" ]] || sni="kokoro-hy2.local"
     printf '%s\n' "$sni"
 }

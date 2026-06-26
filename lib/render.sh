@@ -11,7 +11,7 @@ kokoro_render_hy2_cert() {
     cert="$(kokoro_cfg '.paths.hy2_cert')"
     key="$(kokoro_cfg '.paths.hy2_key')"
     name="$(kokoro_cfg '.inbound.hy2.sni')"
-    [[ -n "$name" && "$name" != "null" ]] || name="$(kokoro_cfg '.inbound.tls.domain')"
+    [[ -n "$name" && "$name" != "null" ]] || name="$(kokoro_cfg '.inbound.tls.cdn_domain')"
     [[ -n "$name" && "$name" != "null" ]] || name="kokoro-hy2.local"
 
     install -d -m 700 "$(dirname "$cert")"

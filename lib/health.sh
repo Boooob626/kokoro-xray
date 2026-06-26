@@ -46,8 +46,5 @@ kokoro_health() {
 
     if [[ "$role" == "exit" ]]; then
         echo "wg port:  $(kokoro_cfg '.multinode.exit_port')/udp"
-        if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
-            echo "tor:      $(systemctl is-active tor 2>/dev/null || echo unknown)"
-        fi
     fi
 }

@@ -65,7 +65,6 @@ kokoro_onboard_edge() {
         fi
     fi
 
-    kokoro_cfg_set '.tor.enabled' 'false'
     kokoro_onboard_firewall
 }
 

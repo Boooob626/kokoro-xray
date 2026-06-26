@@ -65,6 +65,7 @@ kokoro_migrate_merge_defaults() {
       | .inbound.tls.ports = (.inbound.tls.ports // $d.inbound.tls.ports)
       | .caddy.version = (if (.caddy.version // "") == "" then $d.caddy.version else .caddy.version end)
       | del(.caddy.use_l4)
+      | del(.tor)
       | .firewall.enabled = (.firewall.enabled // $d.firewall.enabled)
       | .firewall.ssh_port = (.firewall.ssh_port // $d.firewall.ssh_port)
       | .firewall.extra_allow = (.firewall.extra_allow // $d.firewall.extra_allow)

@@ -129,10 +129,6 @@ def base_outbounds: [
   { tag: "BLOCK", protocol: "blackhole" }
 ];
 
-def exit_tor_outbound: if cfg.tor.enabled then
-  [{ tag: "TOR", protocol: "socks", settings: { servers: [{ address: "127.0.0.1", port: cfg.tor.socks_port }] } }]
-else [] end;
-
 def wg_outbound: if cfg.multinode.enabled then
   [{
     tag: "WG_TO_EXIT",
@@ -187,10 +183,6 @@ def single_node_block_rules: [
   { type: "field", ip: ["geoip:ru"], outboundTag: "BLOCK" }
 ];
 
-def exit_tor_rules: if cfg.tor.enabled then
-  [{ type: "field", domain: ["regexp:\\.onion$"], outboundTag: "TOR" }]
-else [] end;
-
 def edge_single_routing: {
   domainStrategy: "IPIfNonMatch",
   rules: (google_direct_rules + single_node_block_rules + [
@@ -236,14 +228,14 @@ def exit_inbound: {
 
 def exit_config: log_block + {
   inbounds: [exit_inbound],
-  outbounds: (base_outbounds + exit_tor_outbound),
+  outbounds: base_outbounds,
   routing: {
     domainStrategy: "IPIfNonMatch",
-    rules: (exit_tor_rules + [
+    rules: [
       { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
       { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
       { type: "field", network: "tcp,udp", outboundTag: "DIRECT" }
-    ])
+    ]
   },
   policy: policy_block.policy
 };

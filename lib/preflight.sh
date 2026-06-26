@@ -67,10 +67,6 @@ kokoro_preflight_edge() {
         [[ -n "$(kokoro_sec '.inbound.hy2.auth')" ]] || kokoro_die "missing inbound.hy2.auth in secrets.json"
     fi
 
-    if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
-        kokoro_die "Tor is exit-only — enable on exit node after pair (kokoro-xray tor on)"
-    fi
-
     if [[ "$(kokoro_cfg '.multinode.enabled')" == "true" ]]; then
         [[ -n "$(kokoro_sec '.multinode.edge_wg_privkey')" ]] || kokoro_die "missing edge WG private key"
         [[ -n "$(kokoro_cfg '.multinode.peer_exit_pubkey')" ]] || kokoro_die "missing multinode.peer_exit_pubkey"
@@ -81,8 +77,4 @@ kokoro_preflight_edge() {
 kokoro_preflight_exit() {
     [[ -n "$(kokoro_sec '.multinode.exit_wg_privkey')" ]] || kokoro_die "missing exit WG private key"
     [[ -n "$(kokoro_cfg '.multinode.peer_edge_pubkey')" ]] || kokoro_die "missing multinode.peer_edge_pubkey (run pair)"
-
-    if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
-        [[ -n "$(kokoro_cfg '.multinode.peer_edge_pubkey')" ]] || kokoro_die "pair edge before enabling Tor"
-    fi
 }

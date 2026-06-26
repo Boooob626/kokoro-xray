@@ -17,12 +17,10 @@ menu() {
     echo "  3) Show share links"
     echo "  4) Apply config (render + reload)"
     echo "  5) Pair edge <-> exit (WG keys)"
-    echo "  6) Enable Tor on exit (.onion, multinode)"
-    echo "  7) Disable Tor on exit"
-    echo "  8) Show status"
-    echo "  9) Validate configs"
-    echo " 10) Scan REALITY targets"
-    echo " 11) Tune network (TFO + BBR)"
+    echo "  6) Show status"
+    echo "  7) Validate configs"
+    echo "  8) Scan REALITY targets"
+    echo "  9) Tune network (TFO + BBR)"
     echo "  q) Quit"
     echo ""
 }
@@ -43,12 +41,6 @@ kokoro_dispatch() {
         pair)    bash "${KOKORO_ROOT}/roles/pair.sh" ;;
         status)  source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
         validate) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
-        tor)
-            case "${1:-}" in
-                on)  source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_enable ;;
-                off) source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_disable ;;
-                *) kokoro_die "usage: kokoro-xray tor on|off" ;;
-            esac ;;
         geodata)
             source "${KOKORO_ROOT}/lib/geodata.sh"
             kokoro_need_root
@@ -93,24 +85,10 @@ while true; do
         3) source "${KOKORO_ROOT}/lib/link.sh"; kokoro_link_show ;;
         4) source "${KOKORO_ROOT}/lib/apply.sh"; kokoro_apply ;;
         5) bash "${KOKORO_ROOT}/roles/pair.sh" ;;
-        6)
-            if [[ "$(kokoro_cfg '.role')" != "exit" ]]; then
-                kokoro_warn "Tor is exit-only — install exit, pair, then enable Tor there"
-            else
-                source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_enable
-            fi
-            ;;
-        7)
-            if [[ "$(kokoro_cfg '.role')" != "exit" ]]; then
-                kokoro_warn "Tor is exit-only"
-            else
-                source "${KOKORO_ROOT}/lib/tor.sh"; kokoro_tor_disable
-            fi
-            ;;
-        8) source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
-        9) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
-        10) source "${KOKORO_ROOT}/lib/reality-scan.sh"; kokoro_reality_scan --limit 10 ;;
-        11) source "${KOKORO_ROOT}/lib/network-tune.sh"; kokoro_need_root; kokoro_network_tune ;;
+        6) source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
+        7) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
+        8) source "${KOKORO_ROOT}/lib/reality-scan.sh"; kokoro_reality_scan --limit 10 ;;
+        9) source "${KOKORO_ROOT}/lib/network-tune.sh"; kokoro_need_root; kokoro_network_tune ;;
         q|Q) exit 0 ;;
         *) kokoro_warn "invalid choice" ;;
     esac

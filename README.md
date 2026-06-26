@@ -115,7 +115,6 @@ Use `--host auto6` when HY2 should connect to the VPS IPv6 address while the SNI
 | `firewall apply` | Re-apply configured UFW rules |
 | `tune` | Apply optional network tuning |
 | `reality scan` | Probe REALITY targets |
-| `tor on\|off` | Optional exit-node Tor routing |
 | `reinstall --branch main` | Clean reinstall code, keep state |
 
 ## Files

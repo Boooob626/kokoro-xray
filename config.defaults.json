@@ -32,10 +32,6 @@
     "local_wg_ip": "10.66.0.2",
     "peer_wg_ip": "10.66.0.1"
   },
-  "tor": {
-    "enabled": false,
-    "socks_port": 9050
-  },
   "routing": {},
   "firewall": {
     "enabled": true,

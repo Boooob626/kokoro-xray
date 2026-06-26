@@ -60,6 +60,7 @@ Normal update keeps existing state:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Boooob626/kokoro-xray/main/install.sh | sudo bash
 sudo kokoro-xray apply
+sudo kokoro-xray tune
 ```
 
 Clean reinstall removes `/opt/kokoro-xray` and keeps `~/.kokoro-xray`:
@@ -137,6 +138,13 @@ kokoro-xray link --json hy2 --host auto6
 ```
 
 Open the configured UDP port on IPv6 in the VPS firewall/security group.
+
+For best edge throughput after install/update:
+
+```bash
+sudo kokoro-xray tune
+sudo kokoro-xray link --json hy2 --host auto6
+```
 
 If you skipped HY2 during setup, enable it before apply:
 

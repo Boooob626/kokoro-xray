@@ -35,6 +35,8 @@ Kokoro does not reuse Caddy's ACME private storage for HY2. During render/apply,
 
 The exported HY2 client JSON avoids geodata dependencies. It uses explicit private CIDR blocks instead of `geoip:private` or `geosite:private`, and `domainStrategy: AsIs` to avoid DNS pre-resolution during routing.
 
+`kokoro-xray tune` applies edge-side performance defaults: BBR/BBR2 when available, `fq`, TCP Fast Open, disabled TCP slow-start-after-idle, MTU probing, and larger UDP socket buffers for HY2.
+
 ## REALITY scan
 
 `kokoro-xray reality scan` probes `data/reality-seeds.txt` plus optional `--domains` / `--file`.

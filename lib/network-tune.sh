@@ -42,6 +42,16 @@ kokoro_network_tfo_want() { echo 3; }
 
 kokoro_network_qdisc_want() { echo "fq"; }
 
+kokoro_network_rmem_want() { echo 134217728; }
+
+kokoro_network_wmem_want() { echo 134217728; }
+
+kokoro_network_apply_sysctl() {
+    local key="$1" value="$2" path="/proc/sys/${1//./\/}"
+    [[ -e "$path" ]] || return 0
+    sysctl -w "${key}=${value}" >/dev/null 2>&1 || kokoro_warn "sysctl failed: ${key}=${value}"
+}
+
 kokoro_network_status_line() {
     local name current want ok
     name="$1"
@@ -71,11 +81,15 @@ kokoro_network_tune_check() {
     fi
     kokoro_network_status_line "congestion_ctl" "$cc" "$want_cc"
     kokoro_network_status_line "default_qdisc" "$qdisc" "$(kokoro_network_qdisc_want)"
+    kokoro_network_status_line "rmem_max" "$(kokoro_network_sysctl net.core.rmem_max)" "$(kokoro_network_rmem_want)"
+    kokoro_network_status_line "wmem_max" "$(kokoro_network_sysctl net.core.wmem_max)" "$(kokoro_network_wmem_want)"
     echo "  available_cc   $(kokoro_network_cc_list)"
 
     if [[ "$tfo4" == "$(kokoro_network_tfo_want)" \
         && "$cc" == "$want_cc" \
-        && "$qdisc" == "$(kokoro_network_qdisc_want)" ]]; then
+        && "$qdisc" == "$(kokoro_network_qdisc_want)" \
+        && "$(kokoro_network_sysctl net.core.rmem_max)" == "$(kokoro_network_rmem_want)" \
+        && "$(kokoro_network_sysctl net.core.wmem_max)" == "$(kokoro_network_wmem_want)" ]]; then
         return 0
     fi
     return 1
@@ -98,8 +112,15 @@ EOF
 net.ipv4.tcp_fastopen = $(kokoro_network_tfo_want)
 net.ipv6.tcp_fastopen = $(kokoro_network_tfo_want)
 net.core.default_qdisc = $(kokoro_network_qdisc_want)
+net.core.rmem_max = $(kokoro_network_rmem_want)
+net.core.wmem_max = $(kokoro_network_wmem_want)
+net.core.rmem_default = 262144
+net.core.wmem_default = 262144
+net.ipv4.udp_rmem_min = 8192
+net.ipv4.udp_wmem_min = 8192
 net.ipv4.tcp_congestion_control = ${cc}
 net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_mtu_probing = 1
 EOF
 }
 
@@ -116,15 +137,20 @@ kokoro_network_tune_apply() {
     modprobe tcp_bbr2 2>/dev/null || true
     modprobe tcp_bbr 2>/dev/null || true
 
-    sysctl -w "net.ipv4.tcp_fastopen=$(kokoro_network_tfo_want)" >/dev/null
-    if [[ -f /proc/sys/net/ipv6/tcp_fastopen ]]; then
-        sysctl -w "net.ipv6.tcp_fastopen=$(kokoro_network_tfo_want)" >/dev/null
-    fi
-    sysctl -w "net.core.default_qdisc=$(kokoro_network_qdisc_want)" >/dev/null
-    sysctl -w "net.ipv4.tcp_congestion_control=${cc}" >/dev/null
-    sysctl -w net.ipv4.tcp_slow_start_after_idle=0 >/dev/null
+    kokoro_network_apply_sysctl net.ipv4.tcp_fastopen "$(kokoro_network_tfo_want)"
+    kokoro_network_apply_sysctl net.ipv6.tcp_fastopen "$(kokoro_network_tfo_want)"
+    kokoro_network_apply_sysctl net.core.default_qdisc "$(kokoro_network_qdisc_want)"
+    kokoro_network_apply_sysctl net.core.rmem_max "$(kokoro_network_rmem_want)"
+    kokoro_network_apply_sysctl net.core.wmem_max "$(kokoro_network_wmem_want)"
+    kokoro_network_apply_sysctl net.core.rmem_default 262144
+    kokoro_network_apply_sysctl net.core.wmem_default 262144
+    kokoro_network_apply_sysctl net.ipv4.udp_rmem_min 8192
+    kokoro_network_apply_sysctl net.ipv4.udp_wmem_min 8192
+    kokoro_network_apply_sysctl net.ipv4.tcp_congestion_control "${cc}"
+    kokoro_network_apply_sysctl net.ipv4.tcp_slow_start_after_idle 0
+    kokoro_network_apply_sysctl net.ipv4.tcp_mtu_probing 1
 
-    kokoro_log "network tuned: TFO=$(kokoro_network_tfo_want) cc=${cc} qdisc=$(kokoro_network_qdisc_want)"
+    kokoro_log "network tuned: TFO=$(kokoro_network_tfo_want) cc=${cc} qdisc=$(kokoro_network_qdisc_want) udp-buf=$(kokoro_network_rmem_want)"
     kokoro_log "persisted: ${KOKORO_SYSCTL_NET}"
 }
 
@@ -141,6 +167,8 @@ Checks and applies (persisted in /etc/sysctl.d/):
   net.ipv4.tcp_fastopen=3
   net.ipv6.tcp_fastopen=3
   net.core.default_qdisc=fq
+  net.core.rmem_max=134217728
+  net.core.wmem_max=134217728
   net.ipv4.tcp_congestion_control=bbr2|bbr (best available)
   net.ipv4.tcp_slow_start_after_idle=0
 

@@ -41,11 +41,6 @@ kokoro_dispatch() {
         pair)    bash "${KOKORO_ROOT}/roles/pair.sh" ;;
         status)  source "${KOKORO_ROOT}/lib/health.sh"; kokoro_health ;;
         validate) bash "${KOKORO_ROOT}/lib/validate.sh" ;;
-        geodata)
-            source "${KOKORO_ROOT}/lib/geodata.sh"
-            kokoro_need_root
-            kokoro_geodata_update
-            ;;
         reality)
             case "${1:-}" in
                 scan) shift; source "${KOKORO_ROOT}/lib/reality-scan.sh"; kokoro_reality_scan "$@" ;;

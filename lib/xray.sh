@@ -2,9 +2,37 @@
 # kokoro-xray — Xray-core install and service
 
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
-source "${KOKORO_ROOT}/lib/geodata.sh"
 
 KOKORO_XRAY_VERSION="${KOKORO_XRAY_VERSION:-v26.6.1}"
+
+kokoro_xray_release_arch() {
+    case "$(uname -m)" in
+        x86_64) printf '64\n' ;;
+        aarch64) printf 'arm64-v8a\n' ;;
+        *) kokoro_die "unsupported arch: $(uname -m)" ;;
+    esac
+}
+
+kokoro_xray_release_zip() {
+    printf 'Xray-linux-%s.zip\n' "$(kokoro_xray_release_arch)"
+}
+
+kokoro_xray_verify_zip() {
+    local zip_path="$1" dgst_path="$2" expected
+    expected="$(awk -F'= *' '$1 == "SHA2-256" { gsub(/[[:space:]\r]/, "", $2); print $2; exit }' "$dgst_path")"
+    [[ -n "$expected" ]] || kokoro_die "SHA2-256 not found in $(basename "$dgst_path")"
+    printf '%s  %s\n' "$expected" "$zip_path" | sha256sum -c - >/dev/null
+}
+
+kokoro_xray_download_release_zip() {
+    local tmp="$1" zip base_url
+    zip="$(kokoro_xray_release_zip)"
+    base_url="https://github.com/XTLS/Xray-core/releases/download/${KOKORO_XRAY_VERSION}"
+    curl -fsSL "${base_url}/${zip}" -o "${tmp}/${zip}"
+    curl -fsSL "${base_url}/${zip}.dgst" -o "${tmp}/${zip}.dgst"
+    kokoro_xray_verify_zip "${tmp}/${zip}" "${tmp}/${zip}.dgst"
+    printf '%s\n' "$zip"
+}
 
 kokoro_xray_load_paths() {
     dest="$(kokoro_cfg '.paths.xray_bin')"

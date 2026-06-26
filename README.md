@@ -110,7 +110,6 @@ Use `--host auto6` when HY2 should connect to the VPS IPv6 address while the SNI
 | `link --json hy2 --host HOST` | Print full Xray client JSON for HY2 |
 | `status` | Show service and config status |
 | `validate` | Validate rendered configs |
-| `geodata` | Update geo data files |
 | `firewall status` | Show UFW state |
 | `firewall apply` | Re-apply configured UFW rules |
 | `tune` | Apply optional network tuning |

@@ -1,5 +1,3 @@
-# kokoro-xray Architecture
-
 ## Design rules
 
 1. **Shell dispatches, jq renders** — no `sed` on JSON, no imperative config patches in bash
@@ -42,12 +40,6 @@ The exported HY2 client JSON avoids geodata dependencies. It uses explicit priva
 `kokoro-xray reality scan` probes `data/reality-seeds.txt` plus optional `--domains` / `--file`.
 Each host is validated (not bulk-imported): TLS 1.3, ALPN h2, cert SAN, redirect rules.
 Rejects `apple`/`icloud` per Xray-core. Scores by latency + OCSP bonus.
-
-## Runtime assets
-
-Kokoro does not track or publish bundled runtime assets. The installer clones
-the repo, then edge/exit setup downloads Xray from upstream releases and
-verifies the upstream SHA256 digest.
 
 ## Multi-node pairing
 

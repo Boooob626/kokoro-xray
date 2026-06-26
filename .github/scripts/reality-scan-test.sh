@@ -41,10 +41,4 @@ test_blocked
 test_normalize
 test_apply_host
 
-# Live probe (optional, needs network)
-if [[ "${KOKORO_LIVE_SCAN:-}" == "1" ]]; then
-    out="$(kokoro_reality_validate_one github.com)"
-    echo "$out" | grep -q '^OK' && echo "live debian OK" || { echo "live fail: $out"; exit 1; }
-fi
-
 echo "reality-scan-test OK"

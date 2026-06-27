@@ -50,7 +50,6 @@ kokoro_dispatch() {
             kokoro_network_tune "$@"
             ;;
         reinstall)
-            kokoro_need_root
             bash "${KOKORO_ROOT}/install.sh" --clean-install "$@"
             ;;
         *)

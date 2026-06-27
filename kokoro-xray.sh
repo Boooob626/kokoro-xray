@@ -46,9 +46,7 @@ kokoro_dispatch() {
                 *) kokoro_die "usage: kokoro-xray reality scan [--apply|--select]" ;;
             esac ;;
         tune)
-            shift || true
             source "${KOKORO_ROOT}/lib/network-tune.sh"
-            kokoro_need_root
             kokoro_network_tune "$@"
             ;;
         reinstall)

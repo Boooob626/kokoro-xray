@@ -32,6 +32,22 @@ test_sysctl_write() {
     echo "sysctl_write OK"
 }
 
+test_tune_cli_args() {
+    local tmp out err
+    tmp="$(mktemp -d)"
+    out="$(HOME="$tmp" bash "${ROOT}/kokoro-xray.sh" tune --help)"
+    printf '%s\n' "$out" | grep -q 'kokoro-xray tune --check'
+
+    if HOME="$tmp" bash "${ROOT}/kokoro-xray.sh" tune --bad-option >"${tmp}/out" 2>"${tmp}/err"; then
+        echo "bad tune option should fail"; exit 1
+    fi
+    err="$(cat "${tmp}/err")"
+    printf '%s\n' "$err" | grep -q 'unknown option: --bad-option'
+    rm -rf "$tmp"
+    echo "tune_cli_args OK"
+}
+
 test_cc_prefer
 test_sysctl_write
+test_tune_cli_args
 echo "network-tune-test OK"

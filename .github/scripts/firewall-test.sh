@@ -34,6 +34,16 @@ test_parse_allow() {
     echo "parse_allow OK"
 }
 
+test_firewall_cli() {
+    local tmp out
+    tmp="$(mktemp -d)"
+    out="$(HOME="$tmp" bash "${ROOT}/kokoro-xray.sh" firewall status)"
+    printf '%s\n' "$out" | grep -q 'firewall.enabled:'
+    rm -rf "$tmp"
+    echo "firewall_cli OK"
+}
+
 test_ssh_detect
 test_parse_allow
+test_firewall_cli
 echo "firewall-test OK"

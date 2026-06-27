@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# kokoro-xray — VLESS share links
+# kokoro-xray — VLESS share links + terminal QR
 
 : "${KOKORO_ROOT:=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)}"
 source "${KOKORO_ROOT}/lib/common.sh"
@@ -8,7 +8,7 @@ kokoro_link_tls_url() {
     kokoro_ensure_state
     local uuid path mode cdn port
     mode="$(kokoro_cfg '.inbound.mode')"
-    [[ "$mode" == "tls" ]] || return 0
+    [[ "$mode" == "tls" || "$mode" == "both" ]] || return 0
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
@@ -24,7 +24,7 @@ kokoro_link_reality_url() {
     kokoro_ensure_state
     local host="${1:-}" uuid path sni pub sid mode
     mode="$(kokoro_cfg '.inbound.mode')"
-    [[ "$mode" == "reality" ]] || return 0
+    [[ "$mode" == "reality" || "$mode" == "both" ]] || return 0
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     sni="$(kokoro_cfg '.inbound.reality.server_names[0]')"
@@ -42,7 +42,7 @@ kokoro_link_hy2_enabled() {
 kokoro_link_hy2_sni() {
     local sni
     sni="$(kokoro_cfg '.inbound.hy2.sni')"
-    [[ -n "$sni" && "$sni" != "null" ]] || sni="$(kokoro_cfg '.inbound.tls.cdn_domain')"
+    [[ -n "$sni" && "$sni" != "null" ]] || sni="$(kokoro_cfg '.inbound.tls.domain')"
     [[ -n "$sni" && "$sni" != "null" ]] || sni="kokoro-hy2.local"
     printf '%s\n' "$sni"
 }
@@ -193,7 +193,7 @@ kokoro_link_tls_json() {
     kokoro_ensure_state
     local uuid path mode cdn ports_json
     mode="$(kokoro_cfg '.inbound.mode')"
-    [[ "$mode" == "tls" ]] || return 1
+    [[ "$mode" == "tls" || "$mode" == "both" ]] || return 1
     uuid="$(kokoro_sec '.inbound.uuid')"
     path="$(kokoro_sec '.inbound.xhttp_path')"
     cdn="$(kokoro_cfg '.inbound.tls.cdn_domain')"
@@ -377,12 +377,33 @@ kokoro_link_tls_json() {
         }'
 }
 
+kokoro_link_qr_ensure() {
+    command -v qrencode >/dev/null 2>&1 && return 0
+    if [[ "${EUID}" -eq 0 ]]; then
+        # shellcheck source=lib/os.sh
+        source "${KOKORO_ROOT}/lib/os.sh"
+        kokoro_pkg_install qrencode
+        return 0
+    fi
+    kokoro_die "qrencode not found — install qrencode or run as root"
+}
+
+kokoro_link_qr() {
+    local url="$1" label="$2"
+    [[ -n "$url" ]] || return 0
+    kokoro_link_qr_ensure
+    echo "--- ${label} (scan with client app) ---"
+    printf '%s' "$url" | qrencode -t ANSIUTF8 -m 2
+    echo ""
+}
+
 kokoro_link_show() {
-    local json_profile="" host=""
+    local show_qr=false json_profile="" host=""
     local reality_url tls_url hy2_url
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --qr) show_qr=true; shift ;;
             --host)
                 [[ -n "${2:-}" ]] || kokoro_die "--host requires a value"
                 host="$2"
@@ -406,12 +427,14 @@ kokoro-xray link — VLESS share URLs
 
 Usage:
   kokoro-xray link
+  kokoro-xray link --qr
   kokoro-xray link --json [tls]
   kokoro-xray link --json hy2 --host VPS_IP_OR_DOMAIN
   kokoro-xray link --json hy2 --host auto6
 
 Options:
   --host HOST     Public VPS IP/domain; use auto6 to detect this VPS IPv6
+  --qr            Print terminal QR codes (requires qrencode)
   --json PROFILE  Print full Xray client JSON for tls or hy2
 EOF
                 return 0
@@ -436,13 +459,16 @@ EOF
 
     if [[ -n "$reality_url" ]]; then
         printf '%s\n' "$reality_url"
+        [[ "$show_qr" == "true" ]] && kokoro_link_qr "$reality_url" "REALITY"
     fi
 
     if [[ -n "$tls_url" ]]; then
         printf '%s\n' "$tls_url"
+        [[ "$show_qr" == "true" ]] && kokoro_link_qr "$tls_url" "TLS"
     fi
 
     if [[ -n "$hy2_url" ]]; then
         printf '%s\n' "$hy2_url"
+        [[ "$show_qr" == "true" ]] && kokoro_link_qr "$hy2_url" "HY2"
     fi
 }

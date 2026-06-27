@@ -1,0 +1,17 @@
+{
+  "menu_subtitle": "极简 Shell Xray 管理脚本",
+  "menu_edge": "安装 / 更新边缘节点",
+  "menu_exit": "安装 / 更新出口节点",
+  "menu_link": "显示分享链接",
+  "menu_apply": "应用配置 (渲染 + 重载)",
+  "menu_pair": "配对边缘 ↔ 出口 (WG 密钥)",
+  "menu_tor_on": "在出口节点启用 Tor (.onion，多节点)",
+  "menu_tor_off": "在出口节点禁用 Tor",
+  "menu_status": "显示状态",
+  "menu_validate": "验证配置",
+  "menu_reality_scan": "扫描 REALITY 目标",
+  "menu_tune": "网络调优 (TFO + BBR)",
+  "menu_quit": "退出",
+  "menu_choice": "请选择",
+  "invalid_choice": "无效选项"
+}

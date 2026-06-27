@@ -1,13 +1,15 @@
 {
   "version": "0.2.0",
+  "language": "auto",
   "role": "",
   "inbound": {
-    "mode": "tls",
+    "mode": "both",
     "reality": {
       "dest": "www.cloudflare.com:443",
       "server_names": ["www.cloudflare.com"]
     },
     "tls": {
+      "domain": "",
       "cdn_domain": "",
       "acme_email": "",
       "ports": [443]
@@ -19,6 +21,10 @@
       "masquerade": "https://www.cloudflare.com/"
     }
   },
+  "caddy": {
+    "version": "2.9.1",
+    "use_l4": true
+  },
   "multinode": {
     "enabled": false,
     "exit_ip": "",
@@ -28,6 +34,11 @@
     "local_wg_ip": "10.66.0.2",
     "peer_wg_ip": "10.66.0.1"
   },
+  "tor": {
+    "enabled": false,
+    "socks_port": 9050
+  },
+  "routing": {},
   "firewall": {
     "enabled": true,
     "ssh_port": 0,

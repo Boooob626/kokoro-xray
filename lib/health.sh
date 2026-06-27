@@ -3,25 +3,6 @@
 
 source "$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/common.sh"
 
-kokoro_listen_status() {
-    local proto="$1"
-    local port="$2"
-    local opt
-
-    command -v ss >/dev/null 2>&1 || return 0
-    case "$proto" in
-        tcp) opt="-ltnH" ;;
-        udp) opt="-lunH" ;;
-        *) return 0 ;;
-    esac
-
-    if ss $opt "sport = :${port}" 2>/dev/null | grep -q .; then
-        echo "${proto}/${port}: listening"
-    else
-        echo "${proto}/${port}: NOT listening"
-    fi
-}
-
 kokoro_health() {
     local role
     role="$(kokoro_cfg '.role')"
@@ -41,16 +22,8 @@ kokoro_health() {
     if [[ "$role" == "edge" ]]; then
         local mode
         mode="$(kokoro_cfg '.inbound.mode')"
-        if [[ "$mode" == "tls" ]]; then
+        if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
             echo "caddy:    $(systemctl is-active caddy 2>/dev/null || echo unknown)"
-            while IFS= read -r port; do
-                [[ -n "$port" ]] && kokoro_listen_status tcp "$port"
-            done < <(jq -r '.inbound.tls.ports[]?' "${KOKORO_CONFIG}")
-        else
-            kokoro_listen_status tcp 443
-        fi
-        if [[ "$(kokoro_cfg '.inbound.hy2.enabled')" == "true" ]]; then
-            kokoro_listen_status udp "$(kokoro_cfg '.inbound.hy2.port')"
         fi
         if [[ "$mode" == "tls" ]]; then
             echo
@@ -73,5 +46,8 @@ kokoro_health() {
 
     if [[ "$role" == "exit" ]]; then
         echo "wg port:  $(kokoro_cfg '.multinode.exit_port')/udp"
+        if [[ "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
+            echo "tor:      $(systemctl is-active tor 2>/dev/null || echo unknown)"
+        fi
     fi
 }

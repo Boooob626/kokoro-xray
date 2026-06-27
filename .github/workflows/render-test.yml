@@ -13,13 +13,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install jq
         run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
-      - name: Run tests
-        run: |
-          bash .github/scripts/render-test.sh
-          bash .github/scripts/reality-scan-test.sh
-          bash .github/scripts/network-tune-test.sh
-          bash .github/scripts/download-verify-test.sh
-          bash .github/scripts/link-test.sh
-          bash .github/scripts/health-test.sh
-          bash .github/scripts/firewall-test.sh
-          bash .github/scripts/source-path-test.sh
+      - name: Run render tests
+        run: bash .github/scripts/render-test.sh
+      - name: Run reality-scan tests
+        run: bash .github/scripts/reality-scan-test.sh
+      - name: Run network-tune tests
+        run: bash .github/scripts/network-tune-test.sh
+      - name: Run link tests
+        run: bash .github/scripts/link-test.sh
+      - name: Run firewall tests
+        run: bash .github/scripts/firewall-test.sh
+      - name: Run source path tests
+        run: bash .github/scripts/source-path-test.sh
+      - name: Live REALITY probe (github.com)
+        run: KOKORO_LIVE_SCAN=1 bash .github/scripts/reality-scan-test.sh

@@ -11,9 +11,12 @@ jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile cfg "${FIX}/edge-config.json" \
     --slurpfile sec "${FIX}/edge-secrets.json" \
     >"${OUT}/edge-xray.json"
-jq -e '.inbounds | length == 1' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds | length == 2' "${OUT}/edge-xray.json" >/dev/null
+jq -e '(.outbounds | map(.tag) | index("TOR")) | not' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.outbounds | map(.tag) | index("WG_TO_EXIT")' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "WG_TO_EXIT"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .listen == "127.0.0.1"' "${OUT}/edge-xray.json" >/dev/null
+jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .streamSettings.xhttpSettings.mode == null' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.mode == "auto"' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xPaddingObfsMode == true' "${OUT}/edge-xray.json" >/dev/null
 jq -e '.inbounds[] | select(.tag=="TLS_XHTTP_IN") | .streamSettings.xhttpSettings.xPaddingKey == "v"' "${OUT}/edge-xray.json" >/dev/null
@@ -46,8 +49,6 @@ jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile sec "${FIX}/edge-secrets.json" \
     >"${OUT}/edge-single-xray.json"
 jq -e '(.outbounds | map(.tag) | index("WG_TO_EXIT")) | not' "${OUT}/edge-single-xray.json" >/dev/null
-jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .listen == "0.0.0.0"' "${OUT}/edge-single-xray.json" >/dev/null
-jq -e '.inbounds[] | select(.tag=="REALITY_XHTTP_IN") | .streamSettings.xhttpSettings.mode == null' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[0].domain[0] == "geosite:google"' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[0].domain | index("domain:googleapis.cn")' "${OUT}/edge-single-xray.json" >/dev/null
 jq -e '.routing.rules[0].domain | index("domain:gstatic.cn")' "${OUT}/edge-single-xray.json" >/dev/null
@@ -61,8 +62,9 @@ jq -n -r -f "${ROOT}/lib/caddy.jq" \
     --slurpfile cfg "${FIX}/edge-config.json" \
     --slurpfile sec "${FIX}/edge-secrets.json" \
     >"${OUT}/Caddyfile"
-! grep -q 'layer4' "${OUT}/Caddyfile"
-grep -q '^cdn.example.com {' "${OUT}/Caddyfile"
+grep -q 'layer4' "${OUT}/Caddyfile"
+grep -q 'listener_wrappers' "${OUT}/Caddyfile"
+grep -q 'proxy tcp/127.0.0.1:8443' "${OUT}/Caddyfile"
 
 jq '.inbound.tls.ports = [443, 8443]' "${FIX}/edge-config.json" >"${OUT}/edge-ports-config.json"
 jq -n -r -f "${ROOT}/lib/caddy.jq" \
@@ -78,7 +80,8 @@ jq -n -f "${ROOT}/lib/render.jq" \
     --slurpfile sec "${FIX}/exit-secrets.json" \
     >"${OUT}/exit-xray.json"
 jq -e '.inbounds[0].protocol == "wireguard"' "${OUT}/exit-xray.json" >/dev/null
-jq -e '(.outbounds | map(.tag) | index("TOR")) | not' "${OUT}/exit-xray.json" >/dev/null
+jq -e '.outbounds | map(.tag) | index("TOR")' "${OUT}/exit-xray.json" >/dev/null
+jq -e '.routing.rules[0].outboundTag == "TOR"' "${OUT}/exit-xray.json" >/dev/null
 jq -e '.routing.rules[-1].outboundTag == "DIRECT"' "${OUT}/exit-xray.json" >/dev/null
 
 if command -v xray >/dev/null 2>&1 && {

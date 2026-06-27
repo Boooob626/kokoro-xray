@@ -11,11 +11,11 @@ kokoro_onboard_edge() {
         return 0
     fi
 
-    read -r -p "Inbound mode [reality/tls] (tls): " mode
-    mode="${mode:-tls}"
+    read -r -p "Inbound mode [reality/tls/both] (both): " mode
+    mode="${mode:-both}"
     kokoro_cfg_set_str '.inbound.mode' "$mode"
 
-    if [[ "$mode" == "tls" ]]; then
+    if [[ "$mode" == "tls" || "$mode" == "both" ]]; then
         read -r -p "CDN domain (e.g. cdn.example.com): " cdn
         [[ -n "$cdn" ]] && kokoro_cfg_set_str '.inbound.tls.cdn_domain' "$cdn"
         read -r -p "ACME email: " email
@@ -26,7 +26,7 @@ kokoro_onboard_edge() {
 
     kokoro_onboard_hy2 "$cdn"
 
-    if [[ "$mode" == "reality" ]]; then
+    if [[ "$mode" == "reality" || "$mode" == "both" ]]; then
         local do_scan=false scan_args=()
         if [[ "${KOKORO_APPLY_EDGE:-}" == "true" ]]; then
             do_scan=true
@@ -65,6 +65,7 @@ kokoro_onboard_edge() {
         fi
     fi
 
+    kokoro_cfg_set '.tor.enabled' 'false'
     kokoro_onboard_firewall
 }
 
@@ -116,7 +117,7 @@ kokoro_onboard_hy2() {
 
     fallback_sni="$cdn"
     [[ -n "$fallback_sni" ]] || fallback_sni="$(kokoro_cfg '.inbound.hy2.sni')"
-    [[ -n "$fallback_sni" && "$fallback_sni" != "null" ]] || fallback_sni="$(kokoro_cfg '.inbound.tls.cdn_domain')"
+    [[ -n "$fallback_sni" && "$fallback_sni" != "null" ]] || fallback_sni="$(kokoro_cfg '.inbound.tls.domain')"
     [[ -n "$fallback_sni" && "$fallback_sni" != "null" ]] || fallback_sni="kokoro-hy2.local"
     read -r -p "HY2 SNI [${fallback_sni}]: " sni
     sni="${sni:-$fallback_sni}"

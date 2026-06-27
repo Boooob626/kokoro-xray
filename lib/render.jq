@@ -82,7 +82,7 @@ def tls_inbound: {
 
 def hy2_sni:
   if (cfg.inbound.hy2.sni // "") != "" then cfg.inbound.hy2.sni
-  elif (cfg.inbound.tls.cdn_domain // "") != "" then cfg.inbound.tls.cdn_domain
+  elif (cfg.inbound.tls.domain // "") != "" then cfg.inbound.tls.domain
   else "kokoro-hy2.local" end;
 
 def hy2_inbound: {
@@ -128,6 +128,10 @@ def base_outbounds: [
   { tag: "DIRECT", protocol: "freedom" },
   { tag: "BLOCK", protocol: "blackhole" }
 ];
+
+def exit_tor_outbound: if cfg.tor.enabled then
+  [{ tag: "TOR", protocol: "socks", settings: { servers: [{ address: "127.0.0.1", port: cfg.tor.socks_port }] } }]
+else [] end;
 
 def wg_outbound: if cfg.multinode.enabled then
   [{
@@ -183,6 +187,10 @@ def single_node_block_rules: [
   { type: "field", ip: ["geoip:ru"], outboundTag: "BLOCK" }
 ];
 
+def exit_tor_rules: if cfg.tor.enabled then
+  [{ type: "field", domain: ["regexp:\\.onion$"], outboundTag: "TOR" }]
+else [] end;
+
 def edge_single_routing: {
   domainStrategy: "IPIfNonMatch",
   rules: (google_direct_rules + single_node_block_rules + [
@@ -200,8 +208,8 @@ def edge_multinode_routing: {
 def edge_routing: if cfg.multinode.enabled then edge_multinode_routing else edge_single_routing end;
 
 def edge_inbounds:
-  (if mode == "reality" then [reality_inbound] else [] end)
-  + (if mode == "tls" then [tls_inbound] else [] end)
+  (if mode == "reality" or mode == "both" then [reality_inbound] else [] end)
+  + (if mode == "tls" or mode == "both" then [tls_inbound] else [] end)
   + (if hy2_enabled then [hy2_inbound] else [] end);
 
 def edge_config: log_block + {
@@ -228,14 +236,14 @@ def exit_inbound: {
 
 def exit_config: log_block + {
   inbounds: [exit_inbound],
-  outbounds: base_outbounds,
+  outbounds: (base_outbounds + exit_tor_outbound),
   routing: {
     domainStrategy: "IPIfNonMatch",
-    rules: [
+    rules: (exit_tor_rules + [
       { type: "field", ip: ["geoip:private"], outboundTag: "BLOCK" },
       { type: "field", protocol: ["bittorrent"], outboundTag: "BLOCK" },
       { type: "field", network: "tcp,udp", outboundTag: "DIRECT" }
-    ]
+    ])
   },
   policy: policy_block.policy
 };

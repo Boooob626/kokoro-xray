@@ -7,12 +7,13 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 
 export KOKORO_ROOT="$ROOT"
-source "${ROOT}/lib/xray.sh"
+source "${ROOT}/lib/geodata.sh"
 
 printf 'kokoro-test-zip\n' >"${OUT}/test.zip"
 sha="$(sha256sum "${OUT}/test.zip" | awk '{print $1}')"
 
 cat >"${OUT}/test.zip.dgst" <<EOF
+MD5= unused
 SHA2-256= ${sha}
 EOF
 

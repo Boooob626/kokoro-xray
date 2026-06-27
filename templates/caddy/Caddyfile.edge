@@ -1,0 +1,40 @@
+# Reference template — live Caddyfile is rendered by lib/caddy.jq
+{
+    servers {
+        layer4
+    }
+    email admin@{{CDN_DOMAIN}}
+}
+
+:443 {
+    @reality tls sni {{REALITY_SNI}}
+    handle @reality {
+        proxy 127.0.0.1:8443
+    }
+    @cdn tls sni {{CDN_DOMAIN}}
+    handle @cdn {
+        tls
+        reverse_proxy 127.0.0.1:8444 {
+            transport http {
+                versions h2c
+            }
+        }
+    }
+}
+
+{{CDN_DOMAIN}} {
+    handle {{XHTTP_PATH}}* {
+        reverse_proxy 127.0.0.1:8444 {
+            transport http {
+                versions h2c
+            }
+        }
+    }
+    handle {
+        respond "ok" 200
+    }
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}

@@ -11,7 +11,7 @@ kokoro_render_hy2_cert() {
     cert="$(kokoro_cfg '.paths.hy2_cert')"
     key="$(kokoro_cfg '.paths.hy2_key')"
     name="$(kokoro_cfg '.inbound.hy2.sni')"
-    [[ -n "$name" && "$name" != "null" ]] || name="$(kokoro_cfg '.inbound.tls.cdn_domain')"
+    [[ -n "$name" && "$name" != "null" ]] || name="$(kokoro_cfg '.inbound.tls.domain')"
     [[ -n "$name" && "$name" != "null" ]] || name="kokoro-hy2.local"
 
     install -d -m 700 "$(dirname "$cert")"
@@ -51,7 +51,7 @@ kokoro_render_xray() {
 kokoro_render_caddy() {
     local out mode
     mode="$(kokoro_cfg '.inbound.mode')"
-    [[ "$mode" == "tls" ]] || return 0
+    [[ "$mode" == "tls" || "$mode" == "both" ]] || return 0
     out="$(kokoro_cfg '.paths.caddyfile')"
     install -d "$(dirname "$out")"
     jq -n -r -f "${KOKORO_ROOT}/lib/caddy.jq" \
@@ -77,3 +77,8 @@ kokoro_render() {
             ;;
     esac
 }
+
+# Legacy aliases for roles still sourcing this file
+kokoro_build_edge_xray() { kokoro_render_xray; }
+kokoro_build_exit_xray() { kokoro_render_xray; }
+kokoro_build_edge_caddy() { kokoro_render_caddy; }

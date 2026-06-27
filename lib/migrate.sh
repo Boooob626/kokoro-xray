@@ -63,8 +63,8 @@ kokoro_migrate_merge_defaults() {
       | .inbound.hy2.sni = (if (.inbound.hy2.sni // "") == "" then $d.inbound.hy2.sni else .inbound.hy2.sni end)
       | .inbound.hy2.masquerade = (if (.inbound.hy2.masquerade // "") == "" then $d.inbound.hy2.masquerade else .inbound.hy2.masquerade end)
       | .inbound.tls.ports = (.inbound.tls.ports // $d.inbound.tls.ports)
-      | del(.caddy)
-      | del(.tor)
+      | .caddy.version = (if (.caddy.version // "") == "" then $d.caddy.version else .caddy.version end)
+      | .caddy.use_l4 = (.caddy.use_l4 // $d.caddy.use_l4)
       | .firewall.enabled = (.firewall.enabled // $d.firewall.enabled)
       | .firewall.ssh_port = (.firewall.ssh_port // $d.firewall.ssh_port)
       | .firewall.extra_allow = (.firewall.extra_allow // $d.firewall.extra_allow)
@@ -123,6 +123,7 @@ kokoro_migrate_v010_to_v020() {
             | .multinode.peer_exit_pubkey //= ""
             | .multinode.peer_edge_pubkey //= ""
             | .version = "0.2.0"
+            | .caddy = {"version":"2.9.1","use_l4":true}
             | .paths.caddy_bin = "/usr/local/bin/caddy"
             | .paths.geo_dir = "/usr/local/share/xray"
             | .inbound.tls.acme_email //= ""' \

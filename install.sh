@@ -6,6 +6,8 @@ set -euo pipefail
 REPO_URL="${KOKORO_REPO_URL:-https://github.com/Boooob626/kokoro-xray}"
 REPO_BRANCH="${KOKORO_REPO_BRANCH:-}"
 INSTALL_DIR="${KOKORO_INSTALL_DIR:-/opt/kokoro-xray}"
+USE_PREBUILT="${KOKORO_USE_PREBUILT:-1}"
+PREBUILT_URL="${KOKORO_PREBUILT_URL:-}"
 CLEAN_INSTALL=false
 INSTALL_ARGS=()
 
@@ -82,6 +84,90 @@ install_bootstrap_deps() {
     fi
 }
 
+release_asset_arch() {
+    case "$(uname -m)" in
+        x86_64) printf 'amd64\n' ;;
+        aarch64|arm64) printf 'arm64\n' ;;
+        *) return 1 ;;
+    esac
+}
+
+repo_latest_asset_url() {
+    local repo arch
+    [[ "$REPO_URL" =~ github.com[:/]+([^/]+)/([^/.]+)(\.git)?$ ]] || return 1
+    repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    arch="$(release_asset_arch)" || return 1
+    printf 'https://github.com/%s/releases/latest/download/kokoro-xray-runtime-linux-%s.tar.gz\n' "$repo" "$arch"
+}
+
+download_prebuilt_asset() {
+    local out_dir="$1" url
+    [[ "$USE_PREBUILT" != "0" ]] || return 1
+    command -v curl >/dev/null 2>&1 || return 1
+    command -v tar >/dev/null 2>&1 || return 1
+    url="$PREBUILT_URL"
+    [[ -n "$url" ]] || url="$(repo_latest_asset_url)" || return 1
+
+    if ! curl -fsSL "$url" -o "${out_dir}/runtime.tar.gz"; then
+        return 1
+    fi
+    if curl -fsSL "${url}.sha256" -o "${out_dir}/runtime.tar.gz.sha256" 2>/dev/null; then
+        awk '{print $1 "  runtime.tar.gz"}' "${out_dir}/runtime.tar.gz.sha256" >"${out_dir}/runtime.tar.gz.sha256.check"
+        (cd "$out_dir" && sha256sum -c runtime.tar.gz.sha256.check) >/dev/null || die "prebuilt runtime checksum failed"
+    fi
+}
+
+extract_prebuilt_tar() {
+    local tarball="$1" dest="$2"
+    if tar --warning=no-timestamp -tzf "$tarball" >/dev/null 2>&1; then
+        tar --warning=no-timestamp -xzf "$tarball" -C "$dest"
+    else
+        tar -xzf "$tarball" -C "$dest"
+    fi
+}
+
+install_prebuilt() {
+    local tmp
+    [[ -z "$REPO_BRANCH" ]] || return 1
+    tmp="$(mktemp -d)"
+    if ! download_prebuilt_asset "$tmp"; then
+        rm -rf "$tmp"
+        return 1
+    fi
+
+    remove_install_dir
+    install -d "$INSTALL_DIR"
+    if tar --warning=no-timestamp -tzf "${tmp}/runtime.tar.gz" >/dev/null 2>&1; then
+        tar --warning=no-timestamp -xzf "${tmp}/runtime.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+    else
+        tar -xzf "${tmp}/runtime.tar.gz" -C "$INSTALL_DIR" --strip-components=1
+    fi
+    rm -rf "$tmp"
+    chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
+    chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
+    chmod +x "${INSTALL_DIR}/prebuilt/xray" 2>/dev/null || true
+    chmod 644 "${INSTALL_DIR}/data/"*.txt "${INSTALL_DIR}/prebuilt/"*.dat 2>/dev/null || true
+    log "installed from prebuilt runtime asset"
+}
+
+hydrate_prebuilt_runtime() {
+    local tmp
+    tmp="$(mktemp -d)"
+    if ! download_prebuilt_asset "$tmp"; then
+        rm -rf "$tmp"
+        return 1
+    fi
+
+    extract_prebuilt_tar "${tmp}/runtime.tar.gz" "$tmp"
+    if [[ -x "${tmp}/kokoro-xray/prebuilt/xray" && -f "${tmp}/kokoro-xray/prebuilt/geoip.dat" && -f "${tmp}/kokoro-xray/prebuilt/geosite.dat" ]]; then
+        cp -a "${tmp}/kokoro-xray/prebuilt" "${INSTALL_DIR}/"
+        chmod +x "${INSTALL_DIR}/prebuilt/xray" 2>/dev/null || true
+        chmod 644 "${INSTALL_DIR}/prebuilt/"*.dat 2>/dev/null || true
+        log "hydrated prebuilt Xray runtime"
+    fi
+    rm -rf "$tmp"
+}
+
 install_local() {
     local src="$SCRIPT_DIR"
     [[ -f "${src}/kokoro-xray.sh" ]] || die "run from repo root or set KOKORO_REPO_URL"
@@ -99,6 +185,9 @@ install_local() {
 }
 
 install_remote() {
+    if install_prebuilt; then
+        return 0
+    fi
     install_bootstrap_deps
     remove_install_dir
     if [[ -n "$REPO_BRANCH" ]]; then
@@ -106,6 +195,7 @@ install_remote() {
     else
         git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
     fi
+    hydrate_prebuilt_runtime || true
     chmod +x "${INSTALL_DIR}/kokoro-xray.sh" "${INSTALL_DIR}/install.sh"
     chmod +x "${INSTALL_DIR}/lib/"*.sh "${INSTALL_DIR}/roles/"*.sh 2>/dev/null || true
     chmod 644 "${INSTALL_DIR}/data/"*.txt 2>/dev/null || true

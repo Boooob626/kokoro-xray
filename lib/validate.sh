@@ -27,7 +27,7 @@ kokoro_validate() {
     kokoro_validate_geo || return 1
     "$xray_bin" run -test -config "$cfg" || { kokoro_warn "xray config test failed"; return 1; }
 
-    if [[ "$role" == "edge" && "$mode" == "tls" && -f "$caddyfile" ]]; then
+    if [[ "$role" == "edge" && ( "$mode" == "tls" || "$mode" == "both" ) && -f "$caddyfile" ]]; then
         local caddy_bin
         caddy_bin="$(kokoro_cfg '.paths.caddy_bin')"
         if [[ -x "$caddy_bin" ]]; then

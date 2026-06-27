@@ -11,8 +11,13 @@ kokoro_reload() {
 
     systemctl restart xray
 
-    if [[ "$role" == "edge" && "$mode" == "tls" ]]; then
+    if [[ "$role" == "edge" && ( "$mode" == "tls" || "$mode" == "both" ) ]]; then
         systemctl enable caddy >/dev/null 2>&1 || true
         systemctl restart caddy
+    fi
+
+    if [[ "$role" == "exit" && "$(kokoro_cfg '.tor.enabled')" == "true" ]]; then
+        systemctl enable tor >/dev/null 2>&1 || true
+        systemctl restart tor
     fi
 }

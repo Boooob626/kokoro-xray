@@ -1,0 +1,17 @@
+{
+  "menu_subtitle": "minimal shell xray manager",
+  "menu_edge": "Install / update edge node",
+  "menu_exit": "Install / update exit node",
+  "menu_link": "Show share links",
+  "menu_apply": "Apply config (render + reload)",
+  "menu_pair": "Pair edge ↔ exit (WG keys)",
+  "menu_tor_on": "Enable Tor on exit (.onion, multinode)",
+  "menu_tor_off": "Disable Tor on exit",
+  "menu_status": "Show status",
+  "menu_validate": "Validate configs",
+  "menu_reality_scan": "Scan REALITY targets",
+  "menu_tune": "Tune network (TFO + BBR)",
+  "menu_quit": "Quit",
+  "menu_choice": "Choice",
+  "invalid_choice": "invalid choice"
+}

@@ -6,7 +6,7 @@ The scripts keep state in JSON, render configs with `jq`, validate before reload
 
 ## Supported Modes
 
-- Edge single-node: VLESS XHTTP REALITY, TLS, or both
+- Edge single-node: VLESS XHTTP REALITY by default, TLS, or both
 - Optional HY2/Hysteria2 UDP edge on the same node
 - Edge + exit: edge forwards traffic to an exit over WireGuard
 - TLS edge: Caddy handles ACME and HTTPS routing
@@ -17,7 +17,7 @@ The scripts keep state in JSON, render configs with `jq`, validate before reload
 - Debian or Ubuntu
 - Root access
 - `443/tcp` open on edge nodes
-- `443/udp` open when HY2 is enabled, or the custom `inbound.hy2.port`
+- `443/udp` open only if HY2 is enabled, or the custom `inbound.hy2.port`
 - `80/tcp` open on TLS edge nodes for ACME
 - Exit node UDP port open when using edge + exit, default `51820/udp`
 
@@ -39,7 +39,7 @@ Install a test branch:
 curl -fsSL https://raw.githubusercontent.com/Boooob626/kokoro-xray/testing/install.sh | sudo env KOKORO_REPO_URL=https://github.com/Boooob626/kokoro-xray bash -s -- --branch testing --edge
 ```
 
-During edge setup, choose `reality`, `tls`, or `both` for the VLESS inbound mode. HY2 is enabled by default as a separate UDP acceleration option; press Enter at `Enable HY2 UDP acceleration? [Y/n]`, keep port `443` unless you need a custom UDP port, and set the HY2 SNI to your domain.
+During edge setup for gaming latency, press Enter for `reality`. HY2 is off by default; press Enter at `Enable HY2 UDP acceleration? [y/N]` to skip it.
 
 The installer first tries a prebuilt runtime asset from the latest GitHub release. The `testing` branch publishes amd64 and arm64 runtime assets automatically when the branch is pushed. Those assets bundle the repo plus Xray, `geoip.dat`, and `geosite.dat` so VPS setup avoids a second Xray download. Branch installs clone fresh branch code first, then hydrate only the bundled runtime files when an asset is available. If no asset exists, the installer falls back to the normal Xray download path. Disable the fast path with:
 
@@ -139,11 +139,11 @@ kokoro-xray link --json hy2 --host auto6
 
 Open the configured UDP port on IPv6 in the VPS firewall/security group.
 
-For best edge throughput after install/update:
+For best REALITY XHTTP latency after install/update:
 
 ```bash
 sudo kokoro-xray tune
-sudo kokoro-xray link --json hy2 --host auto6
+kokoro-xray link
 ```
 
 If you skipped HY2 during setup, enable it before apply:
